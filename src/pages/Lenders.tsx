@@ -47,7 +47,7 @@ const Lenders = () => {
               isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}>
               <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-                Built for
+                Signal1 for
                 <span className="block text-purple-600">Lenders</span>
               </h1>
             </div>
@@ -56,7 +56,8 @@ const Lenders = () => {
               isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}>
               <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-                Access high-quality deal flow, streamline underwriting, and grow your lending portfolio with our AI-powered platform designed for modern lenders.
+                Access high-quality deal flow, streamline underwriting, and grow your lending portfolio 
+                with Signal1's innovative platform designed for modern lenders.
               </p>
             </div>
 
@@ -82,7 +83,7 @@ const Lenders = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Why Lenders Choose Lovable
+              Why Lenders Choose Signal1
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Everything you need to source deals and grow your lending portfolio
@@ -110,7 +111,7 @@ const Lenders = () => {
             Ready to expand your portfolio?
           </h2>
           <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
-            Join leading lenders who are already growing their business with Lovable.
+            Join leading lenders who are already growing their business with Signal1.
           </p>
           <Button size="lg" className="bg-purple-600 hover:bg-purple-700 text-white px-8">
             Start Free Trial

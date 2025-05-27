@@ -47,7 +47,7 @@ const Brokers = () => {
               isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}>
               <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-                Built for
+                Signal1 for
                 <span className="block text-teal-600">Brokers</span>
               </h1>
             </div>
@@ -56,7 +56,8 @@ const Brokers = () => {
               isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}>
               <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-                Connect with lenders, close deals faster, and grow your brokerage with our AI-powered platform designed specifically for real estate brokers.
+                Connect with lenders, close deals faster, and grow your brokerage with Signal1's 
+                innovative platform designed specifically for real estate brokers.
               </p>
             </div>
 
@@ -82,7 +83,7 @@ const Brokers = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Why Brokers Choose Lovable
+              Why Brokers Choose Signal1
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Everything you need to connect with lenders and close more deals
@@ -110,7 +111,7 @@ const Brokers = () => {
             Ready to grow your brokerage?
           </h2>
           <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
-            Join thousands of brokers who are already closing more deals with Lovable.
+            Join thousands of brokers who are already closing more deals with Signal1.
           </p>
           <Button size="lg" className="bg-teal-600 hover:bg-teal-700 text-white px-8">
             Start Free Trial

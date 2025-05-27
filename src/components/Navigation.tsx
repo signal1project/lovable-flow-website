@@ -19,23 +19,13 @@ const Navigation = () => {
   }, []);
 
   const navLinks = [
-    { href: '/brokers', label: 'For Brokers' },
-    { href: '/lenders', label: 'For Lenders' },
-    { href: '#features', label: 'Features' },
-    { href: '#how-it-works', label: 'How it Works' },
-    { href: '#testimonials', label: 'Testimonials' },
+    { href: '/about', label: 'About' },
+    { href: '/brokers', label: 'Brokers' },
+    { href: '/lenders', label: 'Lenders' },
   ];
 
-  const handleNavClick = (href: string) => {
+  const handleNavClick = () => {
     setIsMobileMenuOpen(false);
-    
-    // If it's a hash link and we're on the home page, scroll to section
-    if (href.startsWith('#') && location.pathname === '/') {
-      const element = document.querySelector(href);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
   };
 
   return (
@@ -49,7 +39,7 @@ const Navigation = () => {
           {/* Logo */}
           <div className="flex-shrink-0">
             <Link to="/" className="text-2xl font-bold text-teal-600">
-              Lovable
+              Signal1
             </Link>
           </div>
 
@@ -57,29 +47,13 @@ const Navigation = () => {
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-8">
               {navLinks.map((link) => (
-                link.href.startsWith('#') ? (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    onClick={(e) => {
-                      if (location.pathname !== '/') {
-                        e.preventDefault();
-                        window.location.href = '/' + link.href;
-                      }
-                    }}
-                    className="text-gray-700 hover:text-teal-600 px-3 py-2 text-sm font-medium transition-colors duration-200"
-                  >
-                    {link.label}
-                  </a>
-                ) : (
-                  <Link
-                    key={link.href}
-                    to={link.href}
-                    className="text-gray-700 hover:text-teal-600 px-3 py-2 text-sm font-medium transition-colors duration-200"
-                  >
-                    {link.label}
-                  </Link>
-                )
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className="text-gray-700 hover:text-teal-600 px-3 py-2 text-sm font-medium transition-colors duration-200"
+                >
+                  {link.label}
+                </Link>
               ))}
             </div>
           </div>
@@ -107,31 +81,14 @@ const Navigation = () => {
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 bg-white/95 backdrop-blur-md rounded-lg mt-2">
               {navLinks.map((link) => (
-                link.href.startsWith('#') ? (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    className="text-gray-700 hover:text-teal-600 block px-3 py-2 text-base font-medium"
-                    onClick={(e) => {
-                      handleNavClick(link.href);
-                      if (location.pathname !== '/') {
-                        e.preventDefault();
-                        window.location.href = '/' + link.href;
-                      }
-                    }}
-                  >
-                    {link.label}
-                  </a>
-                ) : (
-                  <Link
-                    key={link.href}
-                    to={link.href}
-                    className="text-gray-700 hover:text-teal-600 block px-3 py-2 text-base font-medium"
-                    onClick={() => handleNavClick(link.href)}
-                  >
-                    {link.label}
-                  </Link>
-                )
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className="text-gray-700 hover:text-teal-600 block px-3 py-2 text-base font-medium"
+                  onClick={handleNavClick}
+                >
+                  {link.label}
+                </Link>
               ))}
               <div className="pt-2">
                 <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">

@@ -19,8 +19,8 @@ const HeroSection = () => {
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}>
             <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-              Build beautiful apps
-              <span className="block text-teal-600">with AI</span>
+              Welcome to
+              <span className="block text-teal-600">Signal1</span>
             </h1>
           </div>
           
@@ -28,8 +28,8 @@ const HeroSection = () => {
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}>
             <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Lovable is the AI-powered platform that helps developers create stunning, 
-              responsive web applications in minutes, not hours.
+              Connecting brokers and lenders through innovative technology and streamlined processes. 
+              Experience the future of real estate finance.
             </p>
           </div>
 
@@ -37,10 +37,12 @@ const HeroSection = () => {
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-              <Button size="lg" className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 text-lg group">
-                Start Building
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
+              <Link to="/about">
+                <Button size="lg" className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 text-lg group">
+                  Learn More
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
               <Button variant="outline" size="lg" className="px-8 py-3 text-lg border-gray-300 hover:border-teal-600 hover:text-teal-600">
                 Watch Demo
               </Button>
@@ -77,7 +79,7 @@ const HeroSection = () => {
                   <div className="w-16 h-16 bg-teal-600 rounded-full mx-auto mb-4 flex items-center justify-center">
                     <div className="w-6 h-6 bg-white rounded-full"></div>
                   </div>
-                  <p className="text-gray-600">Interactive Demo Preview</p>
+                  <p className="text-gray-600">Signal1 Platform Preview</p>
                 </div>
               </div>
             </div>
