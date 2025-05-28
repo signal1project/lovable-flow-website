@@ -3,11 +3,13 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,6 +28,10 @@ const Navigation = () => {
 
   const handleNavClick = () => {
     setIsMobileMenuOpen(false);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
   };
 
   return (
@@ -60,9 +66,35 @@ const Navigation = () => {
 
           {/* CTA Button */}
           <div className="hidden md:block">
-            <Button className="bg-teal-600 hover:bg-teal-700 text-white">
-              Get Started
-            </Button>
+            {user ? (
+              <div className="flex items-center space-x-4">
+                <Link to="/dashboard">
+                  <Button variant="outline" className="border-teal-600 text-teal-600 hover:bg-teal-600 hover:text-white">
+                    Dashboard
+                  </Button>
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  onClick={handleSignOut}
+                  className="text-gray-600 hover:text-gray-800"
+                >
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <Link to="/login">
+                  <Button variant="outline" className="border-teal-600 text-teal-600 hover:bg-teal-600 hover:text-white">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+                    Get Started
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -90,10 +122,39 @@ const Navigation = () => {
                   {link.label}
                 </Link>
               ))}
-              <div className="pt-2">
-                <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">
-                  Get Started
-                </Button>
+              <div className="pt-2 space-y-2">
+                {user ? (
+                  <>
+                    <Link to="/dashboard" onClick={handleNavClick}>
+                      <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">
+                        Dashboard
+                      </Button>
+                    </Link>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => {
+                        handleSignOut();
+                        handleNavClick();
+                      }}
+                    >
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/login" onClick={handleNavClick}>
+                      <Button variant="outline" className="w-full border-teal-600 text-teal-600">
+                        Sign In
+                      </Button>
+                    </Link>
+                    <Link to="/register" onClick={handleNavClick}>
+                      <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">
+                        Get Started
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
