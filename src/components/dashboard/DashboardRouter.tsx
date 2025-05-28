@@ -8,6 +8,7 @@ const DashboardRouter = () => {
   console.log('DashboardRouter - user:', user, 'profile:', profile, 'loading:', loading);
 
   if (loading) {
+    console.log('Still loading...');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-600"></div>

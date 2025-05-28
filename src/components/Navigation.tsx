@@ -11,6 +11,8 @@ const Navigation = () => {
   const location = useLocation();
   const { user, profile, signOut } = useAuth();
 
+  console.log('Navigation - user:', user, 'profile:', profile);
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
@@ -35,6 +37,7 @@ const Navigation = () => {
   };
 
   const getDashboardUrl = () => {
+    console.log('getDashboardUrl - profile:', profile, 'role:', profile?.role);
     if (!profile?.role) return '/dashboard';
     return profile.role === 'lender' ? '/dashboard/lender' : '/dashboard/broker';
   };
