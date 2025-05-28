@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
@@ -9,7 +8,7 @@ const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,6 +31,11 @@ const Navigation = () => {
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const getDashboardUrl = () => {
+    if (!profile?.role) return '/dashboard';
+    return profile.role === 'lender' ? '/dashboard/lender' : '/dashboard/broker';
   };
 
   return (
@@ -68,7 +72,7 @@ const Navigation = () => {
           <div className="hidden md:block">
             {user ? (
               <div className="flex items-center space-x-4">
-                <Link to="/dashboard">
+                <Link to={getDashboardUrl()}>
                   <Button variant="outline" className="border-teal-600 text-teal-600 hover:bg-teal-600 hover:text-white">
                     Dashboard
                   </Button>
@@ -125,7 +129,7 @@ const Navigation = () => {
               <div className="pt-2 space-y-2">
                 {user ? (
                   <>
-                    <Link to="/dashboard" onClick={handleNavClick}>
+                    <Link to={getDashboardUrl()} onClick={handleNavClick}>
                       <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">
                         Dashboard
                       </Button>

@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +15,10 @@ import Onboarding from "./pages/Onboarding";
 import DashboardPage from "./pages/DashboardPage";
 import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
+import DashboardRouter from "./components/dashboard/DashboardRouter";
+import LenderDashboardPage from "./pages/LenderDashboardPage";
+import BrokerDashboardPage from "./pages/BrokerDashboardPage";
+import RoleProtectedRoute from "./components/auth/RoleProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -46,8 +49,24 @@ const App = () => (
               path="/dashboard" 
               element={
                 <ProtectedRoute>
-                  <DashboardPage />
+                  <DashboardRouter />
                 </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboard/lender" 
+              element={
+                <RoleProtectedRoute allowedRole="lender">
+                  <LenderDashboardPage />
+                </RoleProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboard/broker" 
+              element={
+                <RoleProtectedRoute allowedRole="broker">
+                  <BrokerDashboardPage />
+                </RoleProtectedRoute>
               } 
             />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
