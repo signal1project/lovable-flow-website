@@ -39,7 +39,17 @@ const Navigation = () => {
   const getDashboardUrl = () => {
     console.log('getDashboardUrl - profile:', profile, 'role:', profile?.role);
     if (!profile?.role) return '/dashboard';
-    return profile.role === 'lender' ? '/dashboard/lender' : '/dashboard/broker';
+    
+    switch (profile.role) {
+      case 'admin':
+        return '/dashboard/admin';
+      case 'lender':
+        return '/dashboard/lender';
+      case 'broker':
+        return '/dashboard/broker';
+      default:
+        return '/dashboard';
+    }
   };
 
   return (
