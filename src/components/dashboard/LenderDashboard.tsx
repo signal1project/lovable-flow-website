@@ -1,11 +1,13 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Building, Target } from 'lucide-react';
+import { useProfileCompletion } from '@/hooks/useProfileCompletion';
+import { Upload, FileText, Building, Target, AlertCircle } from 'lucide-react';
 
 interface LenderData {
   company_name?: string;
@@ -17,6 +19,8 @@ interface LenderData {
 const LenderDashboard = () => {
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { isComplete, loading: completionLoading } = useProfileCompletion();
   const [lenderData, setLenderData] = useState<LenderData | null>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -93,7 +97,7 @@ const LenderDashboard = () => {
     }
   };
 
-  if (loading) {
+  if (loading || completionLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-600"></div>
@@ -111,6 +115,29 @@ const LenderDashboard = () => {
           <p className="text-gray-600">Lender Dashboard</p>
         </div>
 
+        {/* Profile Completion Alert */}
+        {!isComplete && (
+          <Card className="mb-6 border-orange-200 bg-orange-50">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3">
+                <AlertCircle className="h-5 w-5 text-orange-600" />
+                <div className="flex-1">
+                  <h3 className="text-lg font-medium text-orange-800">Complete Your Profile</h3>
+                  <p className="text-orange-700">
+                    Complete your lender profile to unlock all features and start receiving matching requests.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => navigate('/profile-completion')}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  Complete Profile
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Company Info Card */}
           <Card>
@@ -125,7 +152,11 @@ const LenderDashboard = () => {
                 <p><strong>Country:</strong> {profile?.country}</p>
               </div>
               {(!lenderData?.company_name || !lenderData?.specialization) && (
-                <Button variant="outline" className="w-full mt-4">
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-4"
+                  onClick={() => navigate('/profile-completion')}
+                >
                   Complete Profile
                 </Button>
               )}
@@ -146,7 +177,11 @@ const LenderDashboard = () => {
                   <p className="text-sm text-gray-500">No criteria summary available</p>
                 )}
               </div>
-              <Button variant="outline" className="w-full mt-4">
+              <Button 
+                variant="outline" 
+                className="w-full mt-4"
+                onClick={() => navigate('/profile-completion')}
+              >
                 Update Criteria
               </Button>
             </CardContent>

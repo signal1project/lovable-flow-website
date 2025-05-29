@@ -1,12 +1,14 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Building, Crown } from 'lucide-react';
+import { useProfileCompletion } from '@/hooks/useProfileCompletion';
+import { Upload, FileText, Building, Crown, AlertCircle } from 'lucide-react';
 
 interface BrokerData {
   agency_name?: string;
@@ -25,6 +27,8 @@ interface BrokerFile {
 const BrokerDashboard = () => {
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { isComplete, loading: completionLoading } = useProfileCompletion();
   const [brokerData, setBrokerData] = useState<BrokerData | null>(null);
   const [brokerFiles, setBrokerFiles] = useState<BrokerFile[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -124,7 +128,7 @@ const BrokerDashboard = () => {
     }
   };
 
-  if (loading) {
+  if (loading || completionLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-600"></div>
@@ -142,6 +146,29 @@ const BrokerDashboard = () => {
           <p className="text-gray-600">Broker Dashboard</p>
         </div>
 
+        {/* Profile Completion Alert */}
+        {!isComplete && (
+          <Card className="mb-6 border-orange-200 bg-orange-50">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3">
+                <AlertCircle className="h-5 w-5 text-orange-600" />
+                <div className="flex-1">
+                  <h3 className="text-lg font-medium text-orange-800">Complete Your Profile</h3>
+                  <p className="text-orange-700">
+                    Complete your broker profile to unlock all features and start uploading client files.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => navigate('/profile-completion')}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  Complete Profile
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {/* Agency Info Card */}
           <Card>
@@ -156,7 +183,11 @@ const BrokerDashboard = () => {
                 <p><strong>Client Notes:</strong> {brokerData?.client_notes || 'None'}</p>
               </div>
               {!brokerData?.agency_name && (
-                <Button variant="outline" className="w-full mt-4">
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-4"
+                  onClick={() => navigate('/profile-completion')}
+                >
                   Complete Profile
                 </Button>
               )}

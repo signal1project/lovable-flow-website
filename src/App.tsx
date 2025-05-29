@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,6 +19,7 @@ import NotFound from "./pages/NotFound";
 import DashboardRouter from "./components/dashboard/DashboardRouter";
 import LenderDashboardPage from "./pages/LenderDashboardPage";
 import BrokerDashboardPage from "./pages/BrokerDashboardPage";
+import ProfileCompletion from "./pages/ProfileCompletion";
 import RoleProtectedRoute from "./components/auth/RoleProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -42,6 +44,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Onboarding />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/profile-completion" 
+              element={
+                <ProtectedRoute>
+                  <ProfileCompletion />
                 </ProtectedRoute>
               } 
             />
