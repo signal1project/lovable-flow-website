@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import RoleProtectedRoute from "@/components/auth/RoleProtectedRoute";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Brokers from "./pages/Brokers";
@@ -19,8 +20,8 @@ import NotFound from "./pages/NotFound";
 import DashboardRouter from "./components/dashboard/DashboardRouter";
 import LenderDashboardPage from "./pages/LenderDashboardPage";
 import BrokerDashboardPage from "./pages/BrokerDashboardPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
 import ProfileCompletion from "./pages/ProfileCompletion";
-import RoleProtectedRoute from "./components/auth/RoleProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,14 @@ const App = () => (
               element={
                 <RoleProtectedRoute allowedRole="broker">
                   <BrokerDashboardPage />
+                </RoleProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboard/admin" 
+              element={
+                <RoleProtectedRoute allowedRole="admin">
+                  <AdminDashboardPage />
                 </RoleProtectedRoute>
               } 
             />

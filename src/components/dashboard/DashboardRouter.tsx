@@ -27,6 +27,11 @@ const DashboardRouter = () => {
   }
 
   // Redirect to role-specific dashboard
+  if (profile.role === 'admin') {
+    console.log('Redirecting to admin dashboard');
+    return <Navigate to="/dashboard/admin" replace />;
+  }
+
   if (profile.role === 'lender') {
     console.log('Redirecting to lender dashboard');
     return <Navigate to="/dashboard/lender" replace />;

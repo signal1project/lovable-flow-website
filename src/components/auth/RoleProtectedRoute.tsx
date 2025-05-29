@@ -4,7 +4,7 @@ import { Navigate } from 'react-router-dom';
 
 interface RoleProtectedRouteProps {
   children: React.ReactNode;
-  allowedRole: 'lender' | 'broker';
+  allowedRole: 'lender' | 'broker' | 'admin';
 }
 
 const RoleProtectedRoute = ({ children, allowedRole }: RoleProtectedRouteProps) => {
@@ -28,7 +28,13 @@ const RoleProtectedRoute = ({ children, allowedRole }: RoleProtectedRouteProps) 
 
   // If user is accessing wrong dashboard, redirect to correct one
   if (profile.role !== allowedRole) {
-    const correctDashboard = profile.role === 'lender' ? '/dashboard/lender' : '/dashboard/broker';
+    const redirectMap = {
+      lender: '/dashboard/lender',
+      broker: '/dashboard/broker',
+      admin: '/dashboard/admin'
+    };
+    
+    const correctDashboard = redirectMap[profile.role as keyof typeof redirectMap] || '/dashboard';
     return <Navigate to={correctDashboard} replace />;
   }
 
