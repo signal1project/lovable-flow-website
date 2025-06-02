@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Navigation from '@/components/Navigation';
+import EmailVerificationBanner from '@/components/EmailVerificationBanner';
 
 const Dashboard = () => {
   const { user, profile, signOut } = useAuth();
@@ -14,6 +15,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
+      <EmailVerificationBanner />
       <div className="pt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
@@ -63,6 +65,16 @@ const Dashboard = () => {
                       </Button>
                       <Button className="w-full" variant="outline">
                         View Applications
+                      </Button>
+                    </>
+                  )}
+                  {profile?.role === 'admin' && (
+                    <>
+                      <Button className="w-full" variant="outline">
+                        Manage Users
+                      </Button>
+                      <Button className="w-full" variant="outline">
+                        View System Stats
                       </Button>
                     </>
                   )}

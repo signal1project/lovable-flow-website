@@ -33,6 +33,7 @@ const Navigation = () => {
   };
 
   const handleSignOut = async () => {
+    console.log('Navigation: Sign out clicked');
     await signOut();
   };
 

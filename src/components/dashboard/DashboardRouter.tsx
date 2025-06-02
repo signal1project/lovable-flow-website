@@ -1,11 +1,24 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+import { useEffect } from 'react';
 
 const DashboardRouter = () => {
   const { user, profile, loading } = useAuth();
+  const { toast } = useToast();
 
   console.log('DashboardRouter - user:', user, 'profile:', profile, 'loading:', loading);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to access your dashboard",
+        variant: "destructive",
+      });
+    }
+  }, [loading, user, toast]);
 
   if (loading) {
     console.log('Still loading...');
@@ -44,6 +57,10 @@ const DashboardRouter = () => {
 
   // Fallback if role is not recognized
   console.log('Role not recognized, redirecting to onboarding');
+  toast({
+    title: "Profile Incomplete",
+    description: "Please complete your profile setup",
+  });
   return <Navigate to="/onboarding" replace />;
 };
 

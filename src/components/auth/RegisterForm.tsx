@@ -67,20 +67,39 @@ const RegisterForm = () => {
       });
 
       if (error) {
-        toast({
-          title: "Registration Failed",
-          description: error.message,
-          variant: "destructive",
-        });
+        console.error('Registration error:', error);
+        if (error.message.includes('already registered')) {
+          toast({
+            title: "Account Already Exists",
+            description: "An account with this email already exists. Please sign in instead.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Registration Failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
           title: "Registration Successful",
-          description: "Please check your email to verify your account.",
+          description: "Welcome to Signal1! You can now access your dashboard.",
         });
-        // Redirect to dashboard which will handle role-based routing
-        navigate('/dashboard');
+        
+        // Role-based redirect
+        if (role === 'admin') {
+          navigate('/dashboard/admin');
+        } else if (role === 'lender') {
+          navigate('/dashboard/lender');
+        } else if (role === 'broker') {
+          navigate('/dashboard/broker');
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (error) {
+      console.error('Unexpected registration error:', error);
       toast({
         title: "Registration Failed",
         description: "An unexpected error occurred",
@@ -190,6 +209,7 @@ const RegisterForm = () => {
                 <SelectContent>
                   <SelectItem value="lender">Lender</SelectItem>
                   <SelectItem value="broker">Broker</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>

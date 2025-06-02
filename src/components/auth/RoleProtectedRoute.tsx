@@ -1,6 +1,8 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+import { useEffect } from 'react';
 
 interface RoleProtectedRouteProps {
   children: React.ReactNode;
@@ -9,6 +11,28 @@ interface RoleProtectedRouteProps {
 
 const RoleProtectedRoute = ({ children, allowedRole }: RoleProtectedRouteProps) => {
   const { user, profile, loading } = useAuth();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to access this page",
+        variant: "destructive",
+      });
+    } else if (!loading && user && !profile) {
+      toast({
+        title: "Profile Required",
+        description: "Please complete your profile setup",
+      });
+    } else if (!loading && user && profile && profile.role !== allowedRole) {
+      toast({
+        title: "Access Denied",
+        description: `This page is only accessible to ${allowedRole}s`,
+        variant: "destructive",
+      });
+    }
+  }, [loading, user, profile, allowedRole, toast]);
 
   if (loading) {
     return (
