@@ -23,6 +23,11 @@ const OnboardingRouter = () => {
     return <Navigate to="/login" replace />;
   }
 
+  // Admin users don't need onboarding, redirect to their dashboard
+  if (profile.role === 'admin') {
+    return <Navigate to="/dashboard/admin" replace />;
+  }
+
   if (profile.role === 'lender') {
     return <LenderOnboarding />;
   }
