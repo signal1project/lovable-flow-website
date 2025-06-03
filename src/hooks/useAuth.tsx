@@ -37,6 +37,54 @@ const cleanupAuthState = () => {
   });
 };
 
+// Helper function to log errors
+const logError = async (userId: string, error: string, context: string) => {
+  try {
+    await supabase.from('admin_notes').insert({
+      user_id: userId,
+      admin_id: userId,
+      note: `[AUTH ERROR - ${context}]: ${error}`,
+      created_at: new Date().toISOString()
+    });
+  } catch (logErr) {
+    console.error('Failed to log error:', logErr);
+  }
+};
+
+// Helper function to create profile if missing
+const createMissingProfile = async (user: User): Promise<Profile | null> => {
+  try {
+    console.log('Creating missing profile for user:', user.id);
+    
+    const profileData = {
+      id: user.id,
+      full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+      role: user.user_metadata?.role || 'user',
+      country: user.user_metadata?.country || 'Unknown'
+    };
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert(profileData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to create profile:', error);
+      await logError(user.id, error.message, 'PROFILE_CREATION');
+      return null;
+    }
+
+    console.log('Profile created successfully:', data);
+    await logError(user.id, `Profile created successfully for role: ${profileData.role}`, 'PROFILE_SUCCESS');
+    return data;
+  } catch (error) {
+    console.error('Error creating profile:', error);
+    await logError(user.id, String(error), 'PROFILE_CREATION_EXCEPTION');
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -53,13 +101,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (error) {
         console.error('Error fetching profile:', error);
-        throw error;
+        await logError(userId, error.message, 'PROFILE_FETCH');
+        
+        // If profile doesn't exist, try to create it
+        if (error.code === 'PGRST116') {
+          console.log('Profile not found, attempting to create...');
+          const newProfile = await createMissingProfile({ id: userId } as User);
+          if (newProfile) {
+            setProfile(newProfile);
+            return;
+          }
+        }
+        
+        setProfile(null);
+        return;
       }
       
       console.log('Profile fetched successfully:', data);
       setProfile(data);
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Exception while fetching profile:', error);
+      await logError(userId, String(error), 'PROFILE_FETCH_EXCEPTION');
       setProfile(null);
     }
   };
@@ -73,14 +135,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const getSession = async () => {
       console.log('Getting initial session...');
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('Initial session:', session);
-      
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Initial session:', session);
+        
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        }
+      } catch (error) {
+        console.error('Error getting session:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     getSession();
@@ -89,10 +156,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       async (event, session) => {
         console.log('Auth state changed:', event, session);
         setUser(session?.user ?? null);
+        
         if (session?.user) {
+          // Defer profile fetching to prevent deadlocks
           setTimeout(() => {
             fetchProfile(session.user.id);
-          }, 0);
+          }, 100);
         } else {
           setProfile(null);
         }
@@ -109,15 +178,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         await supabase.auth.signOut({ scope: 'global' });
       } catch (err) {
-        // Continue even if this fails
+        console.log('Sign out before sign in failed, continuing...');
       }
       
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+      
+      if (error) {
+        console.error('Sign in error:', error);
+      }
+      
       return { error };
     } catch (error) {
+      console.error('Sign in exception:', error);
       return { error };
     }
   };
@@ -128,9 +203,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         await supabase.auth.signOut({ scope: 'global' });
       } catch (err) {
-        // Continue even if this fails
+        console.log('Sign out before sign up failed, continuing...');
       }
 
+      console.log('Signing up with metadata:', userData);
+      
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -139,8 +216,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           emailRedirectTo: `${window.location.origin}/`,
         },
       });
+      
+      if (error) {
+        console.error('Sign up error:', error);
+      } else {
+        console.log('Sign up successful, profile should be created by trigger');
+      }
+      
       return { error };
     } catch (error) {
+      console.error('Sign up exception:', error);
       return { error };
     }
   };
@@ -151,7 +236,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         await supabase.auth.signOut({ scope: 'global' });
       } catch (err) {
-        // Continue even if this fails
+        console.log('Sign out before Google sign in failed, continuing...');
       }
 
       const { error } = await supabase.auth.signInWithOAuth({

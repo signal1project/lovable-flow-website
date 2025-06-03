@@ -60,6 +60,8 @@ const RegisterForm = () => {
 
     setLoading(true);
     try {
+      console.log('Attempting registration with role:', role);
+      
       const { error } = await signUp(email, password, {
         full_name: fullName,
         role: role,
@@ -84,25 +86,28 @@ const RegisterForm = () => {
       } else {
         toast({
           title: "Registration Successful",
-          description: "Welcome to Signal1! You can now access your dashboard.",
+          description: "Welcome to Signal1! Redirecting to your dashboard...",
         });
         
-        // Role-based redirect
-        if (role === 'admin') {
-          navigate('/dashboard/admin');
-        } else if (role === 'lender') {
-          navigate('/dashboard/lender');
-        } else if (role === 'broker') {
-          navigate('/dashboard/broker');
-        } else {
-          navigate('/dashboard');
-        }
+        // Give some time for the profile to be created by the trigger
+        setTimeout(() => {
+          // Role-based redirect
+          if (role === 'admin') {
+            navigate('/dashboard/admin');
+          } else if (role === 'lender') {
+            navigate('/dashboard/lender');
+          } else if (role === 'broker') {
+            navigate('/dashboard/broker');
+          } else {
+            navigate('/dashboard');
+          }
+        }, 1500);
       }
     } catch (error) {
       console.error('Unexpected registration error:', error);
       toast({
         title: "Registration Failed",
-        description: "An unexpected error occurred",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {

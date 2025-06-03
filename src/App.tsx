@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import RoleProtectedRoute from "@/components/auth/RoleProtectedRoute";
+import ErrorLogger from "@/components/ErrorLogger";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Brokers from "./pages/Brokers";
@@ -32,6 +33,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <ErrorLogger />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/about" element={<About />} />

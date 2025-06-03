@@ -21,8 +21,9 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
         variant: "destructive",
       });
     } else if (!loading && user && !profile) {
+      console.log('User exists but no profile found, redirecting to onboarding');
       toast({
-        title: "Profile Required",
+        title: "Profile Setup Required",
         description: "Please complete your profile setup",
       });
     } else if (!loading && user && profile && requiredRole && profile.role !== requiredRole) {
@@ -51,7 +52,15 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   }
 
   if (requiredRole && profile.role !== requiredRole) {
-    return <Navigate to="/dashboard" replace />;
+    // Redirect to correct dashboard based on actual role
+    const redirectMap = {
+      lender: '/dashboard/lender',
+      broker: '/dashboard/broker',
+      admin: '/dashboard/admin'
+    };
+    
+    const correctDashboard = redirectMap[profile.role as keyof typeof redirectMap] || '/dashboard';
+    return <Navigate to={correctDashboard} replace />;
   }
 
   return <>{children}</>;
