@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -63,9 +62,10 @@ const createMissingProfile = async (user: User): Promise<Profile | null> => {
       country: user.user_metadata?.country || 'Unknown'
     };
 
+    // Use upsert to avoid conflicts
     const { data, error } = await supabase
       .from('profiles')
-      .insert(profileData)
+      .upsert(profileData, { onConflict: 'id' })
       .select()
       .single();
 
@@ -90,9 +90,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
-    console.log('Fetching profile for user:', userId);
+  const fetchProfile = async (userId: string, retryCount = 0) => {
+    console.log('Fetching profile for user:', userId, 'retry:', retryCount);
     try {
+      // Add a small delay on retries to let the trigger complete
+      if (retryCount > 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -101,18 +106,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (error) {
         console.error('Error fetching profile:', error);
-        await logError(userId, error.message, 'PROFILE_FETCH');
         
-        // If profile doesn't exist, try to create it
-        if (error.code === 'PGRST116') {
+        // If profile doesn't exist and we haven't retried too many times, try to create it
+        if (error.code === 'PGRST116' && retryCount < 3) {
           console.log('Profile not found, attempting to create...');
-          const newProfile = await createMissingProfile({ id: userId } as User);
-          if (newProfile) {
-            setProfile(newProfile);
-            return;
+          const currentUser = await supabase.auth.getUser();
+          if (currentUser.data.user) {
+            const newProfile = await createMissingProfile(currentUser.data.user);
+            if (newProfile) {
+              setProfile(newProfile);
+              return;
+            }
           }
+          
+          // Retry fetching after a delay
+          console.log('Retrying profile fetch in', (retryCount + 1), 'seconds...');
+          setTimeout(() => {
+            fetchProfile(userId, retryCount + 1);
+          }, 1000 * (retryCount + 1));
+          return;
         }
         
+        await logError(userId, error.message, 'PROFILE_FETCH');
         setProfile(null);
         return;
       }
