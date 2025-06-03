@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,112 +23,28 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper function to clean up auth state
-const cleanupAuthState = () => {
-  Object.keys(localStorage).forEach((key) => {
-    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-      localStorage.removeItem(key);
-    }
-  });
-  Object.keys(sessionStorage || {}).forEach((key) => {
-    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-      sessionStorage.removeItem(key);
-    }
-  });
-};
-
-// Helper function to log errors
-const logError = async (userId: string, error: string, context: string) => {
-  try {
-    await supabase.from('admin_notes').insert({
-      user_id: userId,
-      admin_id: userId,
-      note: `[AUTH ERROR - ${context}]: ${error}`,
-      created_at: new Date().toISOString()
-    });
-  } catch (logErr) {
-    console.error('Failed to log error:', logErr);
-  }
-};
-
-// Helper function to create profile if missing
-const createMissingProfile = async (user: User): Promise<Profile | null> => {
-  try {
-    console.log('Creating missing profile for user:', user.id);
-    
-    const profileData = {
-      id: user.id,
-      full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-      role: user.user_metadata?.role || 'user',
-      country: user.user_metadata?.country || 'Unknown'
-    };
-
-    // Use upsert to avoid conflicts
-    const { data, error } = await supabase
-      .from('profiles')
-      .upsert(profileData, { onConflict: 'id' })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Failed to create profile:', error);
-      await logError(user.id, error.message, 'PROFILE_CREATION');
-      return null;
-    }
-
-    console.log('Profile created successfully:', data);
-    await logError(user.id, `Profile created successfully for role: ${profileData.role}`, 'PROFILE_SUCCESS');
-    return data;
-  } catch (error) {
-    console.error('Error creating profile:', error);
-    await logError(user.id, String(error), 'PROFILE_CREATION_EXCEPTION');
-    return null;
-  }
-};
-
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string, retryCount = 0) => {
-    console.log('Fetching profile for user:', userId, 'retry:', retryCount);
+  const fetchProfile = async (userId: string) => {
+    console.log('Fetching profile for user:', userId);
     try {
-      // Add a small delay on retries to let the trigger complete
-      if (retryCount > 0) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-      }
-
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
-        
-        // If profile doesn't exist and we haven't retried too many times, try to create it
-        if (error.code === 'PGRST116' && retryCount < 3) {
-          console.log('Profile not found, attempting to create...');
-          const currentUser = await supabase.auth.getUser();
-          if (currentUser.data.user) {
-            const newProfile = await createMissingProfile(currentUser.data.user);
-            if (newProfile) {
-              setProfile(newProfile);
-              return;
-            }
-          }
-          
-          // Retry fetching after a delay
-          console.log('Retrying profile fetch in', (retryCount + 1), 'seconds...');
-          setTimeout(() => {
-            fetchProfile(userId, retryCount + 1);
-          }, 1000 * (retryCount + 1));
-          return;
-        }
-        
-        await logError(userId, error.message, 'PROFILE_FETCH');
+        setProfile(null);
+        return;
+      }
+
+      if (!data) {
+        console.log('No profile found for user:', userId);
         setProfile(null);
         return;
       }
@@ -136,7 +53,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setProfile(data);
     } catch (error) {
       console.error('Exception while fetching profile:', error);
-      await logError(userId, String(error), 'PROFILE_FETCH_EXCEPTION');
       setProfile(null);
     }
   };
@@ -173,10 +89,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Defer profile fetching to prevent deadlocks
+          // Small delay to allow trigger to complete
           setTimeout(() => {
             fetchProfile(session.user.id);
-          }, 100);
+          }, 500);
         } else {
           setProfile(null);
         }
@@ -189,13 +105,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      cleanupAuthState();
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (err) {
-        console.log('Sign out before sign in failed, continuing...');
-      }
-      
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -214,13 +123,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, userData: any) => {
     try {
-      cleanupAuthState();
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (err) {
-        console.log('Sign out before sign up failed, continuing...');
-      }
-
       console.log('Signing up with metadata:', userData);
       
       const { error } = await supabase.auth.signUp({
@@ -235,7 +137,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) {
         console.error('Sign up error:', error);
       } else {
-        console.log('Sign up successful, profile should be created by trigger');
+        console.log('Sign up successful');
       }
       
       return { error };
@@ -247,13 +149,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signInWithGoogle = async () => {
     try {
-      cleanupAuthState();
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (err) {
-        console.log('Sign out before Google sign in failed, continuing...');
-      }
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -269,19 +164,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       console.log('Signing out user...');
-      cleanupAuthState();
-      
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (err) {
-        console.error('Error during sign out:', err);
-      }
-      
-      // Force page reload for clean state
+      await supabase.auth.signOut();
       window.location.href = '/';
     } catch (error) {
       console.error('Error signing out:', error);
-      // Force page reload even if error occurs
       window.location.href = '/';
     }
   };
