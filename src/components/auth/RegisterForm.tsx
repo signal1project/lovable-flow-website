@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { supabase } from '@/integrations/supabase/client';
 
 const countries = [
   'United States', 'Canada', 'United Kingdom', 'Australia', 'Germany', 
@@ -27,6 +28,48 @@ const RegisterForm = () => {
   const { signUp, signInWithGoogle } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const createProfile = async (userId: string, userData: any) => {
+    console.log('🔄 Creating profile for user:', userId, 'with data:', userData);
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          full_name: userData.full_name,
+          role: userData.role,
+          country: userData.country,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Profile creation failed:', error);
+        throw error;
+      }
+
+      console.log('✅ Profile created successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('💥 Exception during profile creation:', error);
+      
+      // Log to admin_notes for debugging
+      try {
+        await supabase
+          .from('admin_notes')
+          .insert({
+            user_id: userId,
+            admin_id: userId,
+            note: `Profile creation failed: ${error.message || 'Unknown error'}`
+          });
+      } catch (logError) {
+        console.error('Failed to log error:', logError);
+      }
+      
+      throw error;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,18 +102,20 @@ const RegisterForm = () => {
     }
 
     setLoading(true);
+    console.log('🚀 Starting signup process for:', email, 'with role:', role);
+    
     try {
-      console.log('Attempting registration with role:', role);
-      
-      const { error } = await signUp(email, password, {
+      // Step 1: Create user account
+      const { error: signUpError } = await signUp(email, password, {
         full_name: fullName,
         role: role,
         country: country,
       });
 
-      if (error) {
-        console.error('Registration error:', error);
-        if (error.message.includes('already registered')) {
+      if (signUpError) {
+        console.error('❌ Signup failed:', signUpError);
+        
+        if (signUpError.message.includes('already registered')) {
           toast({
             title: "Account Already Exists",
             description: "An account with this email already exists. Please sign in instead.",
@@ -79,35 +124,56 @@ const RegisterForm = () => {
         } else {
           toast({
             title: "Registration Failed",
-            description: error.message,
+            description: signUpError.message,
             variant: "destructive",
           });
         }
-      } else {
-        toast({
-          title: "Registration Successful",
-          description: "Welcome to Signal1! Redirecting to your dashboard...",
-        });
-        
-        // Give some time for the profile to be created by the trigger
-        setTimeout(() => {
-          // Role-based redirect
-          if (role === 'admin') {
-            navigate('/dashboard/admin');
-          } else if (role === 'lender') {
-            navigate('/dashboard/lender');
-          } else if (role === 'broker') {
-            navigate('/dashboard/broker');
-          } else {
-            navigate('/dashboard');
-          }
-        }, 1500);
+        return;
       }
-    } catch (error) {
-      console.error('Unexpected registration error:', error);
+
+      console.log('✅ User signup successful, getting current user...');
+      
+      // Step 2: Get the current user to ensure they're authenticated
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('❌ Failed to get user after signup:', userError);
+        throw new Error('Failed to authenticate after signup');
+      }
+
+      console.log('✅ Got authenticated user:', user.id);
+
+      // Step 3: Create profile immediately
+      await createProfile(user.id, {
+        full_name: fullName,
+        role: role,
+        country: country,
+      });
+
+      toast({
+        title: "Registration Successful",
+        description: "Welcome to Signal1! Redirecting to your dashboard...",
+      });
+
+      // Step 4: Wait a moment for everything to sync, then redirect
+      setTimeout(() => {
+        const dashboardMap = {
+          admin: '/dashboard/admin',
+          lender: '/dashboard/lender',
+          broker: '/dashboard/broker'
+        };
+        
+        const targetDashboard = dashboardMap[role as keyof typeof dashboardMap] || '/dashboard';
+        console.log('🎯 Redirecting to:', targetDashboard);
+        navigate(targetDashboard);
+      }, 1000);
+
+    } catch (error: any) {
+      console.error('💥 Registration process failed:', error);
+      
       toast({
         title: "Registration Failed",
-        description: "An unexpected error occurred. Please try again.",
+        description: error.message || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {

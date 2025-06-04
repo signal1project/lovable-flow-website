@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,6 +22,7 @@ import LenderDashboardPage from "./pages/LenderDashboardPage";
 import BrokerDashboardPage from "./pages/BrokerDashboardPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import ProfileCompletion from "./pages/ProfileCompletion";
+import DebugAuthState from "./components/DebugAuthState";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +34,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ErrorLogger />
+          <DebugAuthState />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/about" element={<About />} />
@@ -90,7 +91,6 @@ const App = () => (
                 </RoleProtectedRoute>
               } 
             />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
