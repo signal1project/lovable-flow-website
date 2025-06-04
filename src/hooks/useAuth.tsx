@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,7 +38,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (error) {
         console.error('❌ Error fetching profile:', error);
-        console.log('🔍 Error details:', {
+        console.error('🔍 Error details:', {
           code: error.code,
           message: error.message,
           details: error.details,

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -101,43 +100,55 @@ const RegisterForm = () => {
 
       console.log('✅ Got authenticated user:', user.id);
 
-      // Step 3: Create profile directly (the database trigger might have failed)
-      console.log('🔄 Creating profile manually for user:', user.id);
+      // Step 3: Create profile using upsert to avoid conflicts
+      console.log('🔄 Creating profile using upsert for user:', user.id);
       
-      const { data: profileData, error: profileError } = await supabase
+      const profileData = {
+        id: user.id,
+        full_name: fullName,
+        role: role,
+        country: country,
+      };
+
+      console.log('📝 Profile data to upsert:', profileData);
+
+      const { data: upsertedProfile, error: profileError } = await supabase
         .from('profiles')
-        .insert({
-          id: user.id,
-          full_name: fullName,
-          role: role,
-          country: country,
+        .upsert(profileData, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
         })
         .select()
         .single();
 
       if (profileError) {
-        console.error('❌ Direct profile creation failed:', profileError);
+        console.error('❌ Profile upsert failed:', profileError);
+        console.error('❌ Full error details:', {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint
+        });
         
-        // Check if profile already exists
-        const { data: existingProfile, error: checkError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (checkError) {
-          console.error('❌ Failed to check existing profile:', checkError);
-          throw new Error('Profile creation failed and unable to verify existing profile');
-        }
-
-        if (existingProfile) {
-          console.log('✅ Profile already exists (created by trigger):', existingProfile);
-        } else {
-          throw new Error(`Profile creation failed: ${profileError.message}`);
-        }
-      } else {
-        console.log('✅ Profile created successfully:', profileData);
+        toast({
+          title: "Profile Creation Failed",
+          description: `Database error: ${profileError.message}. Code: ${profileError.code}`,
+          variant: "destructive",
+        });
+        return;
       }
+
+      if (!upsertedProfile) {
+        console.error('❌ Profile upsert returned no data');
+        toast({
+          title: "Profile Creation Failed",
+          description: "Profile was not created (no data returned)",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('✅ Profile created successfully:', upsertedProfile);
 
       toast({
         title: "Registration Successful",
@@ -159,6 +170,11 @@ const RegisterForm = () => {
 
     } catch (error: any) {
       console.error('💥 Registration process failed:', error);
+      console.error('💥 Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       
       toast({
         title: "Registration Failed",
