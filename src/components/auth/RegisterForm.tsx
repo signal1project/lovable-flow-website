@@ -29,48 +29,6 @@ const RegisterForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const createProfile = async (userId: string, userData: any) => {
-    console.log('🔄 Creating profile for user:', userId, 'with data:', userData);
-    
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          full_name: userData.full_name,
-          role: userData.role,
-          country: userData.country,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('❌ Profile creation failed:', error);
-        throw error;
-      }
-
-      console.log('✅ Profile created successfully:', data);
-      return data;
-    } catch (error) {
-      console.error('💥 Exception during profile creation:', error);
-      
-      // Log to admin_notes for debugging
-      try {
-        await supabase
-          .from('admin_notes')
-          .insert({
-            user_id: userId,
-            admin_id: userId,
-            note: `Profile creation failed: ${error.message || 'Unknown error'}`
-          });
-      } catch (logError) {
-        console.error('Failed to log error:', logError);
-      }
-      
-      throw error;
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -105,7 +63,7 @@ const RegisterForm = () => {
     console.log('🚀 Starting signup process for:', email, 'with role:', role);
     
     try {
-      // Step 1: Create user account
+      // Step 1: Create user account with metadata
       const { error: signUpError } = await signUp(email, password, {
         full_name: fullName,
         role: role,
@@ -131,9 +89,9 @@ const RegisterForm = () => {
         return;
       }
 
-      console.log('✅ User signup successful, getting current user...');
+      console.log('✅ User signup successful');
       
-      // Step 2: Get the current user to ensure they're authenticated
+      // Step 2: Get the authenticated user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
@@ -143,19 +101,50 @@ const RegisterForm = () => {
 
       console.log('✅ Got authenticated user:', user.id);
 
-      // Step 3: Create profile immediately
-      await createProfile(user.id, {
-        full_name: fullName,
-        role: role,
-        country: country,
-      });
+      // Step 3: Create profile directly (the database trigger might have failed)
+      console.log('🔄 Creating profile manually for user:', user.id);
+      
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          full_name: fullName,
+          role: role,
+          country: country,
+        })
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error('❌ Direct profile creation failed:', profileError);
+        
+        // Check if profile already exists
+        const { data: existingProfile, error: checkError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (checkError) {
+          console.error('❌ Failed to check existing profile:', checkError);
+          throw new Error('Profile creation failed and unable to verify existing profile');
+        }
+
+        if (existingProfile) {
+          console.log('✅ Profile already exists (created by trigger):', existingProfile);
+        } else {
+          throw new Error(`Profile creation failed: ${profileError.message}`);
+        }
+      } else {
+        console.log('✅ Profile created successfully:', profileData);
+      }
 
       toast({
         title: "Registration Successful",
         description: "Welcome to Signal1! Redirecting to your dashboard...",
       });
 
-      // Step 4: Wait a moment for everything to sync, then redirect
+      // Step 4: Redirect to appropriate dashboard
       setTimeout(() => {
         const dashboardMap = {
           admin: '/dashboard/admin',

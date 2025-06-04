@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    console.log('Fetching profile for user:', userId);
+    console.log('🔍 Fetching profile for user:', userId);
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -38,21 +38,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching profile:', error);
+        console.error('❌ Error fetching profile:', error);
+        console.log('🔍 Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
         setProfile(null);
         return;
       }
 
       if (!data) {
-        console.log('No profile found for user:', userId);
+        console.log('⚠️ No profile found for user:', userId);
         setProfile(null);
         return;
       }
       
-      console.log('Profile fetched successfully:', data);
+      console.log('✅ Profile fetched successfully:', data);
       setProfile(data);
     } catch (error) {
-      console.error('Exception while fetching profile:', error);
+      console.error('💥 Exception while fetching profile:', error);
       setProfile(null);
     }
   };
@@ -65,17 +71,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const getSession = async () => {
-      console.log('Getting initial session...');
+      console.log('🔄 Getting initial session...');
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        console.log('Initial session:', session);
+        console.log('📋 Initial session:', session);
         
         setUser(session?.user ?? null);
         if (session?.user) {
           await fetchProfile(session.user.id);
         }
       } catch (error) {
-        console.error('Error getting session:', error);
+        console.error('❌ Error getting session:', error);
       } finally {
         setLoading(false);
       }
@@ -85,11 +91,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session);
+        console.log('🔄 Auth state changed:', event, session?.user?.id || 'no user');
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Small delay to allow trigger to complete
+          // Small delay to allow any triggers to complete
           setTimeout(() => {
             fetchProfile(session.user.id);
           }, 500);
@@ -111,19 +117,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
       
       if (error) {
-        console.error('Sign in error:', error);
+        console.error('❌ Sign in error:', error);
       }
       
       return { error };
     } catch (error) {
-      console.error('Sign in exception:', error);
+      console.error('💥 Sign in exception:', error);
       return { error };
     }
   };
 
   const signUp = async (email: string, password: string, userData: any) => {
     try {
-      console.log('Signing up with metadata:', userData);
+      console.log('🚀 Signing up with metadata:', userData);
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -135,14 +141,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
       
       if (error) {
-        console.error('Sign up error:', error);
+        console.error('❌ Sign up error:', error);
       } else {
-        console.log('Sign up successful');
+        console.log('✅ Sign up successful');
       }
       
       return { error };
     } catch (error) {
-      console.error('Sign up exception:', error);
+      console.error('💥 Sign up exception:', error);
       return { error };
     }
   };
@@ -163,11 +169,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      console.log('Signing out user...');
+      console.log('👋 Signing out user...');
       await supabase.auth.signOut();
       window.location.href = '/';
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('❌ Error signing out:', error);
       window.location.href = '/';
     }
   };
