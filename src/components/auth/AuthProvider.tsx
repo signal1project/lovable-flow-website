@@ -8,7 +8,6 @@ interface Profile {
   full_name: string;
   role: string;
   country: string;
-  email?: string;
 }
 
 interface AuthContextType {
@@ -63,11 +62,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     try {
       const profileData = {
-        id: user.id, // This matches auth.uid()
+        id: user.id,
         full_name: userData.full_name,
         role: userData.role,
         country: userData.country,
-        email: user.email,
       };
 
       console.log('📝 Profile data to create:', profileData);
