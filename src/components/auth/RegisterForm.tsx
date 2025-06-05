@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -24,9 +24,24 @@ const RegisterForm = () => {
   const [country, setCountry] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signUp, signInWithGoogle } = useAuth();
+  const { signUp, signInWithGoogle, user, profile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Handle redirect after successful signup and profile creation
+  useEffect(() => {
+    if (user && profile) {
+      console.log('🔄 Redirecting user after signup based on role:', profile.role);
+      
+      // Direct to role-specific onboarding or dashboard
+      if (profile.role === 'admin') {
+        navigate('/dashboard/admin');
+      } else {
+        // Lenders and brokers go to onboarding first
+        navigate('/onboarding');
+      }
+    }
+  }, [user, profile, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,13 +108,10 @@ const RegisterForm = () => {
 
       toast({
         title: "Registration Successful",
-        description: "Welcome to Signal1! Please check your email to verify your account.",
+        description: "Welcome to Signal1! Setting up your profile...",
       });
 
-      // Redirect to login page
-      setTimeout(() => {
-        navigate('/login');
-      }, 1000);
+      // Navigation will be handled by the useEffect above once profile is created
 
     } catch (error: any) {
       console.error('💥 Registration process failed:', error);

@@ -40,19 +40,17 @@ const DashboardRouter = () => {
   }
 
   // Redirect to role-specific dashboard
-  if (profile.role === 'admin') {
-    console.log('Redirecting to admin dashboard');
-    return <Navigate to="/dashboard/admin" replace />;
-  }
+  const roleRoutes = {
+    admin: '/dashboard/admin',
+    lender: '/dashboard/lender',
+    broker: '/dashboard/broker'
+  };
 
-  if (profile.role === 'lender') {
-    console.log('Redirecting to lender dashboard');
-    return <Navigate to="/dashboard/lender" replace />;
-  }
-
-  if (profile.role === 'broker') {
-    console.log('Redirecting to broker dashboard');
-    return <Navigate to="/dashboard/broker" replace />;
+  const targetRoute = roleRoutes[profile.role as keyof typeof roleRoutes];
+  
+  if (targetRoute) {
+    console.log(`Redirecting to ${targetRoute} for role: ${profile.role}`);
+    return <Navigate to={targetRoute} replace />;
   }
 
   // Fallback if role is not recognized

@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,24 @@ const LoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, user, profile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Handle redirect after successful login based on profile role
+  useEffect(() => {
+    if (user && profile) {
+      console.log('🔄 Redirecting user based on role:', profile.role);
+      const roleRoutes = {
+        admin: '/dashboard/admin',
+        lender: '/dashboard/lender',
+        broker: '/dashboard/broker'
+      };
+      
+      const targetRoute = roleRoutes[profile.role as keyof typeof roleRoutes] || '/dashboard';
+      navigate(targetRoute);
+    }
+  }, [user, profile, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,8 +57,7 @@ const LoginForm = () => {
           title: "Welcome back!",
           description: "You have successfully logged in.",
         });
-        // Redirect to dashboard which will handle role-based routing
-        navigate('/dashboard');
+        // Navigation will be handled by the useEffect above
       }
     } catch (error) {
       toast({
