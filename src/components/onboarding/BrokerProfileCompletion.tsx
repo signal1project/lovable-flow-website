@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useAuth } from '@/components/auth/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -28,11 +28,12 @@ const BrokerProfileCompletion = () => {
     setLoading(true);
 
     try {
-      // Create or update broker record with profile_id
+      // Create or update broker record with both id and profile_id
       const { error } = await supabase
         .from('brokers')
         .upsert({
-          profile_id: user.id, // Use profile_id instead of id
+          id: user.id, // Primary key
+          profile_id: user.id, // For RLS policies
           agency_name: formData.agencyName,
           client_notes: formData.clientNotes,
           subscription_tier: formData.subscriptionTier,

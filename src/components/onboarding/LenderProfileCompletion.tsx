@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/components/auth/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Upload } from 'lucide-react';
@@ -50,11 +50,12 @@ const LenderProfileCompletion = () => {
         guidelineFileUrl = publicUrl;
       }
 
-      // Create or update lender record with profile_id
+      // Create or update lender record with both id and profile_id
       const { error } = await supabase
         .from('lenders')
         .upsert({
-          profile_id: user.id, // Use profile_id instead of id
+          id: user.id, // Primary key
+          profile_id: user.id, // For RLS policies
           company_name: formData.companyName,
           specialization: formData.specialization,
           criteria_summary: formData.criteriaSummary,
