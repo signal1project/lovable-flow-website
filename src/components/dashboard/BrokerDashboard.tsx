@@ -1,5 +1,5 @@
 
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -46,8 +46,8 @@ const BrokerDashboard = () => {
       const { data, error } = await supabase
         .from('brokers')
         .select('*')
-        .eq('id', user.id)
-        .single();
+        .eq('profile_id', user.id) // Use profile_id instead of id
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching broker data:', error);

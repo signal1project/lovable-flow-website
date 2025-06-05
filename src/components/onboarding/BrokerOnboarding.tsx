@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -29,11 +29,11 @@ const BrokerOnboarding = () => {
     setLoading(true);
 
     try {
-      // Create broker record
+      // Create broker record with profile_id
       const { error: brokerError } = await supabase
         .from('brokers')
         .insert({
-          id: user.id,
+          profile_id: user.id, // Use profile_id instead of id
           agency_name: formData.agencyName,
           client_notes: formData.clientNotes,
           subscription_tier: formData.subscriptionTier,
@@ -75,8 +75,9 @@ const BrokerOnboarding = () => {
         description: "Your broker profile has been created successfully.",
       });
 
-      navigate('/dashboard');
+      navigate('/dashboard/broker');
     } catch (error: any) {
+      console.error('❌ Broker onboarding error:', error);
       toast({
         title: "Error",
         description: error.message,

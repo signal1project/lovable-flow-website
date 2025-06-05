@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ProfileCompletionStatus {
@@ -25,8 +25,8 @@ export const useProfileCompletion = (): ProfileCompletionStatus => {
           const { data, error } = await supabase
             .from('lenders')
             .select('*')
-            .eq('id', user.id)
-            .single();
+            .eq('profile_id', user.id) // Use profile_id instead of id
+            .maybeSingle();
 
           if (error && error.code !== 'PGRST116') {
             console.error('Error checking lender profile:', error);
@@ -38,8 +38,8 @@ export const useProfileCompletion = (): ProfileCompletionStatus => {
           const { data, error } = await supabase
             .from('brokers')
             .select('*')
-            .eq('id', user.id)
-            .single();
+            .eq('profile_id', user.id) // Use profile_id instead of id
+            .maybeSingle();
 
           if (error && error.code !== 'PGRST116') {
             console.error('Error checking broker profile:', error);
@@ -47,6 +47,9 @@ export const useProfileCompletion = (): ProfileCompletionStatus => {
           } else {
             setIsComplete(!!data && !!data.agency_name);
           }
+        } else if (profile.role === 'admin') {
+          // Admins don't need additional profile completion
+          setIsComplete(true);
         }
       } catch (error) {
         console.error('Error checking profile completion:', error);

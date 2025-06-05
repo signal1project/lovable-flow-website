@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -28,11 +28,11 @@ const BrokerProfileCompletion = () => {
     setLoading(true);
 
     try {
-      // Create or update broker record
+      // Create or update broker record with profile_id
       const { error } = await supabase
         .from('brokers')
         .upsert({
-          id: user.id,
+          profile_id: user.id, // Use profile_id instead of id
           agency_name: formData.agencyName,
           client_notes: formData.clientNotes,
           subscription_tier: formData.subscriptionTier,
@@ -47,6 +47,7 @@ const BrokerProfileCompletion = () => {
 
       navigate('/dashboard/broker');
     } catch (error: any) {
+      console.error('❌ Broker profile completion error:', error);
       toast({
         title: "Error",
         description: error.message,

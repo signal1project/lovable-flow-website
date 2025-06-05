@@ -1,6 +1,7 @@
+
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import { supabase } from '@/integrations/supabase/client';
 
 const countries = [
   'United States', 'Canada', 'United Kingdom', 'Australia', 'Germany', 
@@ -62,12 +62,13 @@ const RegisterForm = () => {
     console.log('🚀 Starting signup process for:', email, 'with role:', role);
     
     try {
-      // Step 1: Create user account with metadata
-      const { error: signUpError } = await signUp(email, password, {
+      const userData = {
         full_name: fullName,
         role: role,
         country: country,
-      });
+      };
+
+      const { error: signUpError } = await signUp(email, password, userData);
 
       if (signUpError) {
         console.error('❌ Signup failed:', signUpError);
@@ -89,92 +90,19 @@ const RegisterForm = () => {
       }
 
       console.log('✅ User signup successful');
-      
-      // Step 2: Get the authenticated user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        console.error('❌ Failed to get user after signup:', userError);
-        throw new Error('Failed to authenticate after signup');
-      }
-
-      console.log('✅ Got authenticated user:', user.id);
-
-      // Step 3: Create profile using upsert to avoid conflicts
-      console.log('🔄 Creating profile using upsert for user:', user.id);
-      
-      const profileData = {
-        id: user.id,
-        full_name: fullName,
-        role: role,
-        country: country,
-      };
-
-      console.log('📝 Profile data to upsert:', profileData);
-
-      const { data: upsertedProfile, error: profileError } = await supabase
-        .from('profiles')
-        .upsert(profileData, { 
-          onConflict: 'id',
-          ignoreDuplicates: false 
-        })
-        .select()
-        .single();
-
-      if (profileError) {
-        console.error('❌ Profile upsert failed:', profileError);
-        console.error('❌ Full error details:', {
-          code: profileError.code,
-          message: profileError.message,
-          details: profileError.details,
-          hint: profileError.hint
-        });
-        
-        toast({
-          title: "Profile Creation Failed",
-          description: `Database error: ${profileError.message}. Code: ${profileError.code}`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!upsertedProfile) {
-        console.error('❌ Profile upsert returned no data');
-        toast({
-          title: "Profile Creation Failed",
-          description: "Profile was not created (no data returned)",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log('✅ Profile created successfully:', upsertedProfile);
 
       toast({
         title: "Registration Successful",
-        description: "Welcome to Signal1! Redirecting to your dashboard...",
+        description: "Welcome to Signal1! Please check your email to verify your account.",
       });
 
-      // Step 4: Redirect to appropriate dashboard
+      // Redirect to login page
       setTimeout(() => {
-        const dashboardMap = {
-          admin: '/dashboard/admin',
-          lender: '/dashboard/lender',
-          broker: '/dashboard/broker'
-        };
-        
-        const targetDashboard = dashboardMap[role as keyof typeof dashboardMap] || '/dashboard';
-        console.log('🎯 Redirecting to:', targetDashboard);
-        navigate(targetDashboard);
+        navigate('/login');
       }, 1000);
 
     } catch (error: any) {
       console.error('💥 Registration process failed:', error);
-      console.error('💥 Error details:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      });
       
       toast({
         title: "Registration Failed",

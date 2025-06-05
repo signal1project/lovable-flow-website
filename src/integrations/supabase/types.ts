@@ -92,6 +92,7 @@ export type Database = {
           client_notes: string | null
           created_at: string | null
           id: string
+          profile_id: string | null
           subscription_tier: string | null
         }
         Insert: {
@@ -99,6 +100,7 @@ export type Database = {
           client_notes?: string | null
           created_at?: string | null
           id: string
+          profile_id?: string | null
           subscription_tier?: string | null
         }
         Update: {
@@ -106,6 +108,7 @@ export type Database = {
           client_notes?: string | null
           created_at?: string | null
           id?: string
+          profile_id?: string | null
           subscription_tier?: string | null
         }
         Relationships: [
@@ -126,6 +129,7 @@ export type Database = {
           criteria_summary: string | null
           guideline_file_url: string | null
           id: string
+          profile_id: string | null
           specialization: string | null
         }
         Insert: {
@@ -135,6 +139,7 @@ export type Database = {
           criteria_summary?: string | null
           guideline_file_url?: string | null
           id: string
+          profile_id?: string | null
           specialization?: string | null
         }
         Update: {
@@ -144,6 +149,7 @@ export type Database = {
           criteria_summary?: string | null
           guideline_file_url?: string | null
           id?: string
+          profile_id?: string | null
           specialization?: string | null
         }
         Relationships: [
