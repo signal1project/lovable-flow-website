@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -50,7 +49,7 @@ const UserDetailModal = ({ user, open, onOpenChange, onUserUpdated }: UserDetail
     try {
       const { data, error } = await supabase
         .from('admin_notes')
-        .select(`*, profiles:admin_id(full_name)`)
+        .select(`*, profiles:created_by(full_name)`)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
