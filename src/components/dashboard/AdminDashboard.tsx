@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, FileText, Building } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import UserDetailModal from './UserDetailModal';
-import AddNoteModal from './AddNoteModal';
-import UserTable from './UserTable';
-import SearchBar from './SearchBar';
-import FileViewerModal from './FileViewerModal';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Users, FileText, Building } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import UserDetailModal from "./UserDetailModal";
+import AddNoteModal from "./AddNoteModal";
+import UserTable from "./UserTable";
+import SearchBar from "./SearchBar";
+import FileViewerModal from "./FileViewerModal";
 
 interface DashboardStats {
   totalLenders: number;
@@ -27,16 +27,20 @@ interface UserData {
 }
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState<DashboardStats>({ totalLenders: 0, totalBrokers: 0, totalFiles: 0 });
+  const [stats, setStats] = useState<DashboardStats>({
+    totalLenders: 0,
+    totalBrokers: 0,
+    totalFiles: 0,
+  });
   const [users, setUsers] = useState<UserData[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showFileModal, setShowFileModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState("all");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -51,60 +55,64 @@ const AdminDashboard = () => {
     try {
       // Fetch stats
       const [lendersResult, brokersResult, filesResult] = await Promise.all([
-        supabase.from('lenders').select('id', { count: 'exact' }),
-        supabase.from('brokers').select('id', { count: 'exact' }),
-        supabase.from('broker_files').select('id', { count: 'exact' })
+        supabase.from("lenders").select("id", { count: "exact" }),
+        supabase.from("brokers").select("id", { count: "exact" }),
+        supabase.from("broker_files").select("id", { count: "exact" }),
       ]);
 
       setStats({
         totalLenders: lendersResult.count || 0,
         totalBrokers: brokersResult.count || 0,
-        totalFiles: filesResult.count || 0
+        totalFiles: filesResult.count || 0,
       });
 
       // Fetch all users with their role-specific data
       const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      console.log("Fetched profiles:", profiles); // <-- Add here
 
       if (profilesError) throw profilesError;
 
       const usersWithData = await Promise.all(
         profiles.map(async (profile) => {
           let roleData = null;
-          
-          if (profile.role === 'lender') {
+
+          if (profile.role === "lender") {
             const { data } = await supabase
-              .from('lenders')
-              .select('*')
-              .eq('id', profile.id)
+              .from("lenders")
+              .select("*")
+              .eq("id", profile.id)
               .single();
             roleData = data;
-          } else if (profile.role === 'broker') {
+          } else if (profile.role === "broker") {
             const { data } = await supabase
-              .from('brokers')
-              .select('*')
-              .eq('id', profile.id)
+              .from("brokers")
+              .select("*")
+              .eq("id", profile.id)
               .single();
             roleData = data;
           }
 
           return {
             ...profile,
-            lender_data: profile.role === 'lender' ? roleData : null,
-            broker_data: profile.role === 'broker' ? roleData : null
+            lender_data: profile.role === "lender" ? roleData : null,
+            broker_data: profile.role === "broker" ? roleData : null,
           };
         })
       );
 
+      console.log("Users with role data:", usersWithData); // <-- Add here
+
       setUsers(usersWithData);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error("Error fetching dashboard data:", error);
       toast({
         title: "Error",
         description: "Failed to load dashboard data",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -115,18 +123,19 @@ const AdminDashboard = () => {
     let filtered = users;
 
     // Filter by role based on active tab
-    if (activeTab === 'brokers') {
-      filtered = filtered.filter(user => user.role === 'broker');
-    } else if (activeTab === 'lenders') {
-      filtered = filtered.filter(user => user.role === 'lender');
+    if (activeTab === "brokers") {
+      filtered = filtered.filter((user) => user.role === "broker");
+    } else if (activeTab === "lenders") {
+      filtered = filtered.filter((user) => user.role === "lender");
     }
 
     // Filter by search term
     if (searchTerm) {
-      filtered = filtered.filter(user =>
-        user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.country.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (user) =>
+          user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.country.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -149,7 +158,11 @@ const AdminDashboard = () => {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this user? This action cannot be undone."
+      )
+    ) {
       return;
     }
 
@@ -159,16 +172,16 @@ const AdminDashboard = () => {
 
       toast({
         title: "Success",
-        description: "User deleted successfully"
+        description: "User deleted successfully",
       });
-      
+
       fetchDashboardData();
     } catch (error) {
-      console.error('Error deleting user:', error);
+      console.error("Error deleting user:", error);
       toast({
         title: "Error",
         description: "Failed to delete user",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -186,31 +199,37 @@ const AdminDashboard = () => {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">Manage users, files, and platform overview</p>
+          <p className="text-gray-600">
+            Manage users, files, and platform overview
+          </p>
         </div>
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Lenders</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Lenders
+              </CardTitle>
               <Building className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalLenders}</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Brokers</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Brokers
+              </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalBrokers}</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Files</CardTitle>
@@ -239,7 +258,7 @@ const AdminDashboard = () => {
                 <TabsTrigger value="brokers">Brokers</TabsTrigger>
                 <TabsTrigger value="lenders">Lenders</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value={activeTab} className="mt-6">
                 <UserTable
                   users={filteredUsers}

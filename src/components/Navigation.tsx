@@ -1,9 +1,8 @@
-
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Menu, X } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -11,21 +10,21 @@ const Navigation = () => {
   const location = useLocation();
   const { user, profile, signOut } = useAuth();
 
-  console.log('Navigation - user:', user, 'profile:', profile);
+  console.log("Navigation - user:", user, "profile:", profile);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const navLinks = [
-    { href: '/about', label: 'About' },
-    { href: '/brokers', label: 'Brokers' },
-    { href: '/lenders', label: 'Lenders' },
+    { href: "/about", label: "About" },
+    { href: "/brokers", label: "Brokers" },
+    { href: "/lenders", label: "Lenders" },
   ];
 
   const handleNavClick = () => {
@@ -33,32 +32,37 @@ const Navigation = () => {
   };
 
   const handleSignOut = async () => {
-    console.log('Navigation: Sign out clicked');
-    await signOut();
+    console.log("Sign out button clicked");
+    try {
+      await signOut();
+      console.log("signOut() completed");
+    } catch (e) {
+      console.error("Error during sign out:", e);
+    }
   };
 
   const getDashboardUrl = () => {
-    console.log('getDashboardUrl - profile:', profile, 'role:', profile?.role);
-    if (!profile?.role) return '/dashboard';
-    
+    console.log("getDashboardUrl - profile:", profile, "role:", profile?.role);
+    if (!profile?.role) return "/dashboard";
+
     switch (profile.role) {
-      case 'admin':
-        return '/dashboard/admin';
-      case 'lender':
-        return '/dashboard/lender';
-      case 'broker':
-        return '/dashboard/broker';
+      case "admin":
+        return "/dashboard/admin";
+      case "lender":
+        return "/dashboard/lender";
+      case "broker":
+        return "/dashboard/broker";
       default:
-        return '/dashboard';
+        return "/dashboard";
     }
   };
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      isScrolled 
-        ? 'bg-white/90 backdrop-blur-md shadow-sm' 
-        : 'bg-transparent'
-    }`}>
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled ? "bg-white/90 backdrop-blur-md shadow-sm" : "bg-transparent"
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -88,12 +92,15 @@ const Navigation = () => {
             {user ? (
               <div className="flex items-center space-x-4">
                 <Link to={getDashboardUrl()}>
-                  <Button variant="outline" className="border-teal-600 text-teal-600 hover:bg-teal-600 hover:text-white">
+                  <Button
+                    variant="outline"
+                    className="border-teal-600 text-teal-600 hover:bg-teal-600 hover:text-white"
+                  >
                     Dashboard
                   </Button>
                 </Link>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   onClick={handleSignOut}
                   className="text-gray-600 hover:text-gray-800"
                 >
@@ -103,7 +110,10 @@ const Navigation = () => {
             ) : (
               <div className="flex items-center space-x-4">
                 <Link to="/login">
-                  <Button variant="outline" className="border-teal-600 text-teal-600 hover:bg-teal-600 hover:text-white">
+                  <Button
+                    variant="outline"
+                    className="border-teal-600 text-teal-600 hover:bg-teal-600 hover:text-white"
+                  >
                     Sign In
                   </Button>
                 </Link>
@@ -149,8 +159,8 @@ const Navigation = () => {
                         Dashboard
                       </Button>
                     </Link>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="w-full"
                       onClick={() => {
                         handleSignOut();
@@ -163,7 +173,10 @@ const Navigation = () => {
                 ) : (
                   <>
                     <Link to="/login" onClick={handleNavClick}>
-                      <Button variant="outline" className="w-full border-teal-600 text-teal-600">
+                      <Button
+                        variant="outline"
+                        className="w-full border-teal-600 text-teal-600"
+                      >
                         Sign In
                       </Button>
                     </Link>

@@ -66,12 +66,17 @@ export const useAuthOperations = () => {
 
   const signOut = async () => {
     try {
-      console.log("👋 Signing out user...");
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      console.log("Session before signOut:", session);
+      if (!session) {
+        console.warn("No active session found.");
+        return;
+      }
       await supabase.auth.signOut();
-      window.location.href = "/";
     } catch (error) {
-      console.error("❌ Error signing out:", error);
-      window.location.href = "/";
+      console.error("Error during signOut:", error);
     }
   };
 
