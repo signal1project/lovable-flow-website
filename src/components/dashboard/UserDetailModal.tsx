@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -16,16 +17,6 @@ interface UserDetailModalProps {
   onUserUpdated: () => void;
 }
 
-interface AdminNote {
-  id: string;
-  note: string;
-  created_at: string;
-  created_by: string | null;
-  profiles: {
-    full_name: string;
-  } | null;
-}
-
 const UserDetailModal = ({ user, open, onOpenChange, onUserUpdated }: UserDetailModalProps) => {
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -34,7 +25,6 @@ const UserDetailModal = ({ user, open, onOpenChange, onUserUpdated }: UserDetail
     country: ''
   });
   const [roleSpecificData, setRoleSpecificData] = useState<any>({});
-  const [notes, setNotes] = useState<AdminNote[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,49 +40,8 @@ const UserDetailModal = ({ user, open, onOpenChange, onUserUpdated }: UserDetail
       } else if (user.role === 'broker' && user.broker_data) {
         setRoleSpecificData(user.broker_data);
       }
-      
-      fetchUserNotes();
     }
   }, [user]);
-
-  const fetchUserNotes = async () => {
-    try {
-      // First get the notes with explicit typing
-      const { data: notesData, error: notesError } = await supabase
-        .from('admin_notes')
-        .select('id, note, created_at, created_by')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (notesError) throw notesError;
-
-      // Then get the creator profiles for each note separately
-      const notesWithProfiles: AdminNote[] = await Promise.all(
-        (notesData || []).map(async (note) => {
-          if (note.created_by) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('full_name')
-              .eq('id', note.created_by)
-              .single();
-            
-            return {
-              ...note,
-              profiles: profile
-            };
-          }
-          return {
-            ...note,
-            profiles: null
-          };
-        })
-      );
-      
-      setNotes(notesWithProfiles);
-    } catch (error) {
-      console.error('Error fetching user notes:', error);
-    }
-  };
 
   const handleProfileUpdate = async () => {
     setLoading(true);
@@ -278,23 +227,6 @@ const UserDetailModal = ({ user, open, onOpenChange, onUserUpdated }: UserDetail
 
           <h3 className="text-lg font-semibold border-b pb-2 mt-4">Role Specific Information</h3>
           {renderRoleFields()}
-
-          {notes.length > 0 && (
-            <>
-              <h3 className="text-lg font-semibold border-b pb-2 mt-4">Admin Notes</h3>
-              <div className="space-y-3">
-                {notes.map((note) => (
-                  <div key={note.id} className="bg-gray-50 p-3 rounded-md">
-                    <p className="text-sm">{note.note}</p>
-                    <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
-                      <span>By {note.profiles?.full_name || 'Unknown'}</span>
-                      <span>{new Date(note.created_at).toLocaleString()}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
