@@ -101,6 +101,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "brokers_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "user_roles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       lenders: {
@@ -142,6 +149,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lenders_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "user_roles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -173,7 +187,21 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_roles: {
+        Row: {
+          id: string | null
+          role: string | null
+        }
+        Insert: {
+          id?: string | null
+          role?: string | null
+        }
+        Update: {
+          id?: string | null
+          role?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

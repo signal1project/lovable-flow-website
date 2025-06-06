@@ -23,6 +23,29 @@ interface UserTableProps {
 }
 
 const UserTable = ({ users, onUserClick, onAddNote, onViewFiles, onDeleteUser }: UserTableProps) => {
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'default';
+      case 'lender':
+        return 'secondary';
+      case 'broker':
+        return 'outline';
+      default:
+        return 'secondary';
+    }
+  };
+
+  const getProfileStatus = (user: UserData) => {
+    if (user.role === 'admin') return { status: 'N/A', variant: 'default' as const };
+    
+    const hasData = user.role === 'lender' ? user.lender_data : user.broker_data;
+    return {
+      status: hasData ? 'Complete' : 'Incomplete',
+      variant: hasData ? 'default' as const : 'destructive' as const
+    };
+  };
+
   return (
     <Table>
       <TableHeader>
@@ -31,74 +54,71 @@ const UserTable = ({ users, onUserClick, onAddNote, onViewFiles, onDeleteUser }:
           <TableHead>Role</TableHead>
           <TableHead>Country</TableHead>
           <TableHead>Profile Status</TableHead>
+          <TableHead>Join Date</TableHead>
           <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {users.map((user) => (
-          <TableRow key={user.id}>
-            <TableCell className="font-medium">{user.full_name}</TableCell>
-            <TableCell>
-              <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                {user.role}
-              </Badge>
-            </TableCell>
-            <TableCell>{user.country}</TableCell>
-            <TableCell>
-              {user.role === 'lender' && (
-                <Badge variant={user.lender_data ? 'default' : 'destructive'}>
-                  {user.lender_data ? 'Complete' : 'Incomplete'}
+        {users.map((user) => {
+          const profileStatus = getProfileStatus(user);
+          return (
+            <TableRow key={user.id}>
+              <TableCell className="font-medium">{user.full_name}</TableCell>
+              <TableCell>
+                <Badge variant={getRoleColor(user.role)}>
+                  {user.role}
                 </Badge>
-              )}
-              {user.role === 'broker' && (
-                <Badge variant={user.broker_data ? 'default' : 'destructive'}>
-                  {user.broker_data ? 'Complete' : 'Incomplete'}
+              </TableCell>
+              <TableCell>{user.country}</TableCell>
+              <TableCell>
+                <Badge variant={profileStatus.variant}>
+                  {profileStatus.status}
                 </Badge>
-              )}
-              {user.role === 'admin' && (
-                <Badge variant="default">N/A</Badge>
-              )}
-            </TableCell>
-            <TableCell>
-              <div className="flex space-x-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onUserClick(user)}
-                  title="View/Edit"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onViewFiles(user)}
-                  title="View Files"
-                >
-                  <FileText className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onAddNote(user)}
-                  title="Add Note"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-                {user.role !== 'admin' && (
+              </TableCell>
+              <TableCell className="text-sm text-gray-500">
+                {new Date(user.created_at).toLocaleDateString()}
+              </TableCell>
+              <TableCell>
+                <div className="flex space-x-2">
                   <Button
                     size="sm"
-                    variant="destructive"
-                    onClick={() => onDeleteUser(user.id)}
-                    title="Delete User"
+                    variant="outline"
+                    onClick={() => onUserClick(user)}
+                    title="View/Edit Profile"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Edit className="h-4 w-4" />
                   </Button>
-                )}
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onViewFiles(user)}
+                    title="View Files"
+                  >
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onAddNote(user)}
+                    title="Add Note"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  {user.role !== 'admin' && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => onDeleteUser(user.id)}
+                      title="Delete User"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );
