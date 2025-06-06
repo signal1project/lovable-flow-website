@@ -16,6 +16,16 @@ interface UserDetailModalProps {
   onUserUpdated: () => void;
 }
 
+interface AdminNote {
+  id: string;
+  note: string;
+  created_at: string;
+  created_by: string | null;
+  profiles: {
+    full_name: string;
+  } | null;
+}
+
 const UserDetailModal = ({ user, open, onOpenChange, onUserUpdated }: UserDetailModalProps) => {
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -24,7 +34,7 @@ const UserDetailModal = ({ user, open, onOpenChange, onUserUpdated }: UserDetail
     country: ''
   });
   const [roleSpecificData, setRoleSpecificData] = useState<any>({});
-  const [notes, setNotes] = useState<any[]>([]);
+  const [notes, setNotes] = useState<AdminNote[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -47,17 +57,17 @@ const UserDetailModal = ({ user, open, onOpenChange, onUserUpdated }: UserDetail
 
   const fetchUserNotes = async () => {
     try {
-      // First get the notes
+      // First get the notes with explicit typing
       const { data: notesData, error: notesError } = await supabase
         .from('admin_notes')
-        .select('*')
+        .select('id, note, created_at, created_by')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
       if (notesError) throw notesError;
 
-      // Then get the creator profiles for each note
-      const notesWithProfiles = await Promise.all(
+      // Then get the creator profiles for each note separately
+      const notesWithProfiles: AdminNote[] = await Promise.all(
         (notesData || []).map(async (note) => {
           if (note.created_by) {
             const { data: profile } = await supabase
