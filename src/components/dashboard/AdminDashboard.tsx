@@ -1,16 +1,14 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Users, FileText, Building, Search, Plus, Edit, Trash2 } from 'lucide-react';
+import { Users, FileText, Building } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import UserDetailModal from './UserDetailModal';
 import AddNoteModal from './AddNoteModal';
+import UserTable from './UserTable';
+import SearchBar from './SearchBar';
+import FileViewerModal from './FileViewerModal';
 
 interface DashboardStats {
   totalLenders: number;
@@ -37,6 +35,8 @@ const AdminDashboard = () => {
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
+  const [showFileModal, setShowFileModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,7 +45,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     filterUsers();
-  }, [searchTerm, users]);
+  }, [searchTerm, users, activeTab]);
 
   const fetchDashboardData = async () => {
     try {
@@ -112,16 +112,24 @@ const AdminDashboard = () => {
   };
 
   const filterUsers = () => {
-    if (!searchTerm) {
-      setFilteredUsers(users);
-      return;
+    let filtered = users;
+
+    // Filter by role based on active tab
+    if (activeTab === 'brokers') {
+      filtered = filtered.filter(user => user.role === 'broker');
+    } else if (activeTab === 'lenders') {
+      filtered = filtered.filter(user => user.role === 'lender');
     }
 
-    const filtered = users.filter(user =>
-      user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.country.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(user =>
+        user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.country.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
     setFilteredUsers(filtered);
   };
 
@@ -133,6 +141,11 @@ const AdminDashboard = () => {
   const handleAddNote = (user: UserData) => {
     setSelectedUser(user);
     setShowNoteModal(true);
+  };
+
+  const handleViewFiles = (user: UserData) => {
+    setSelectedUser(user);
+    setShowFileModal(true);
   };
 
   const handleDeleteUser = async (userId: string) => {
@@ -209,87 +222,34 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* User Management */}
+        {/* User Management with Tabs */}
         <Card>
           <CardHeader>
             <CardTitle>User Management</CardTitle>
-            <div className="flex items-center space-x-2">
-              <Search className="h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search users by name, role, or country..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-            </div>
+            <SearchBar
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              placeholder="Search users by name, role, or country..."
+            />
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Country</TableHead>
-                  <TableHead>Profile Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.full_name}</TableCell>
-                    <TableCell>
-                      <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                        {user.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{user.country}</TableCell>
-                    <TableCell>
-                      {user.role === 'lender' && (
-                        <Badge variant={user.lender_data ? 'default' : 'destructive'}>
-                          {user.lender_data ? 'Complete' : 'Incomplete'}
-                        </Badge>
-                      )}
-                      {user.role === 'broker' && (
-                        <Badge variant={user.broker_data ? 'default' : 'destructive'}>
-                          {user.broker_data ? 'Complete' : 'Incomplete'}
-                        </Badge>
-                      )}
-                      {user.role === 'admin' && (
-                        <Badge variant="default">N/A</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleUserClick(user)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleAddNote(user)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                        {user.role !== 'admin' && (
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDeleteUser(user.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="all">All Users</TabsTrigger>
+                <TabsTrigger value="brokers">Brokers</TabsTrigger>
+                <TabsTrigger value="lenders">Lenders</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value={activeTab} className="mt-6">
+                <UserTable
+                  users={filteredUsers}
+                  onUserClick={handleUserClick}
+                  onAddNote={handleAddNote}
+                  onViewFiles={handleViewFiles}
+                  onDeleteUser={handleDeleteUser}
+                />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
@@ -307,6 +267,11 @@ const AdminDashboard = () => {
             open={showNoteModal}
             onOpenChange={setShowNoteModal}
             onNoteAdded={() => {}}
+          />
+          <FileViewerModal
+            user={selectedUser}
+            open={showFileModal}
+            onOpenChange={setShowFileModal}
           />
         </>
       )}

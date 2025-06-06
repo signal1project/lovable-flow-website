@@ -11,42 +11,24 @@ export type Database = {
     Tables: {
       admin_notes: {
         Row: {
-          admin_id: string | null
           created_at: string | null
+          created_by: string | null
           id: string
           note: string
-          user_id: string
         }
         Insert: {
-          admin_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           id?: string
           note: string
-          user_id: string
         }
         Update: {
-          admin_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           id?: string
           note?: string
-          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "admin_notes_admin_id_fkey"
-            columns: ["admin_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "admin_notes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       broker_files: {
         Row: {
@@ -166,6 +148,7 @@ export type Database = {
         Row: {
           country: string | null
           created_at: string | null
+          email: string | null
           full_name: string
           id: string
           role: string
@@ -173,6 +156,7 @@ export type Database = {
         Insert: {
           country?: string | null
           created_at?: string | null
+          email?: string | null
           full_name: string
           id: string
           role: string
@@ -180,6 +164,7 @@ export type Database = {
         Update: {
           country?: string | null
           created_at?: string | null
+          email?: string | null
           full_name?: string
           id?: string
           role?: string
