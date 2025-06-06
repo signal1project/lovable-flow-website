@@ -47,14 +47,38 @@ const UserDetailModal = ({ user, open, onOpenChange, onUserUpdated }: UserDetail
 
   const fetchUserNotes = async () => {
     try {
-      const { data, error } = await supabase
+      // First get the notes
+      const { data: notesData, error: notesError } = await supabase
         .from('admin_notes')
-        .select(`*, profiles:created_by(full_name)`)
+        .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      setNotes(data || []);
+      if (notesError) throw notesError;
+
+      // Then get the creator profiles for each note
+      const notesWithProfiles = await Promise.all(
+        (notesData || []).map(async (note) => {
+          if (note.created_by) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', note.created_by)
+              .single();
+            
+            return {
+              ...note,
+              profiles: profile
+            };
+          }
+          return {
+            ...note,
+            profiles: null
+          };
+        })
+      );
+      
+      setNotes(notesWithProfiles);
     } catch (error) {
       console.error('Error fetching user notes:', error);
     }
