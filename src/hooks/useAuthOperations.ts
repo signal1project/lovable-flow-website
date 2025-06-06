@@ -1,7 +1,9 @@
+import { supabase } from "@/integrations/supabase/client";
+import { UserData } from "@/types/auth";
+import { createProfile } from "@/utils/profileOperations";
 
-import { supabase } from '@/integrations/supabase/client';
-import { UserData } from '@/types/auth';
-import { createProfile } from '@/utils/profileOperations';
+const allowedRoles = ["lender", "broker", "admin"] as const;
+type Role = (typeof allowedRoles)[number];
 
 export const useAuthOperations = () => {
   const signIn = async (email: string, password: string) => {
@@ -10,60 +12,48 @@ export const useAuthOperations = () => {
         email,
         password,
       });
-      
+
       if (error) {
-        console.error('❌ Sign in error:', error);
+        console.error("❌ Sign in error:", error);
       }
-      
+
       return { error };
     } catch (error) {
-      console.error('💥 Sign in exception:', error);
+      console.error("💥 Sign in exception:", error);
       return { error };
     }
   };
 
-  const signUp = async (email: string, password: string, userData: UserData) => {
-    try {
-      console.log('🚀 Signing up with metadata:', userData);
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: userData,
-          emailRedirectTo: `${window.location.origin}/`,
-        },
-      });
-      
-      if (error) {
-        console.error('❌ Sign up error:', error);
-        return { error };
-      }
+  const signUp = async (
+    email: string,
+    password: string,
+    userData: { full_name: string; role: string; country: string }
+  ) => {
+    const role = userData.role.toLowerCase();
 
-      console.log('✅ Sign up successful, user:', data.user);
-
-      if (data.user && !data.user.email_confirmed_at) {
-        console.log('📧 User needs email confirmation');
-      } else if (data.user) {
-        console.log('🔄 Creating profile immediately...');
-        try {
-          await createProfile(data.user, userData);
-        } catch (profileError) {
-          console.error('❌ Profile creation failed during signup:', profileError);
-        }
-      }
-      
-      return { error: null };
-    } catch (error) {
-      console.error('💥 Sign up exception:', error);
-      return { error };
+    if (!allowedRoles.includes(role as Role)) {
+      return { error: { message: `Invalid role: ${userData.role}` } };
     }
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: userData.full_name,
+          role,
+          country: userData.country,
+        },
+      },
+    });
+
+    return { error };
   };
 
   const signInWithGoogle = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
           redirectTo: `${window.location.origin}/`,
         },
@@ -76,12 +66,12 @@ export const useAuthOperations = () => {
 
   const signOut = async () => {
     try {
-      console.log('👋 Signing out user...');
+      console.log("👋 Signing out user...");
       await supabase.auth.signOut();
-      window.location.href = '/';
+      window.location.href = "/";
     } catch (error) {
-      console.error('❌ Error signing out:', error);
-      window.location.href = '/';
+      console.error("❌ Error signing out:", error);
+      window.location.href = "/";
     }
   };
 

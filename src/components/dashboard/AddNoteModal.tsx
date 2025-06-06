@@ -1,11 +1,15 @@
-
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface AddNoteModalProps {
   user: any;
@@ -14,8 +18,13 @@ interface AddNoteModalProps {
   onNoteAdded: () => void;
 }
 
-const AddNoteModal = ({ user, open, onOpenChange, onNoteAdded }: AddNoteModalProps) => {
-  const [note, setNote] = useState('');
+const AddNoteModal = ({
+  user,
+  open,
+  onOpenChange,
+  onNoteAdded,
+}: AddNoteModalProps) => {
+  const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
@@ -25,36 +34,35 @@ const AddNoteModal = ({ user, open, onOpenChange, onNoteAdded }: AddNoteModalPro
       toast({
         title: "Error",
         description: "Note cannot be empty",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
-      const { error } = await supabase.from('admin_notes').insert({
-        user_id: user.id,
-        admin_id: currentUser?.id,
-        note: note.trim()
+      const { error } = await supabase.from("admin_notes").insert({
+        note: note.trim(),
+        created_by: currentUser?.id || null,
       });
-      
+
       if (error) throw error;
-      
+
       toast({
         title: "Success",
-        description: "Note added successfully"
+        description: "Note added successfully",
       });
-      
-      setNote('');
+
+      setNote("");
       onNoteAdded();
       onOpenChange(false);
     } catch (error) {
-      console.error('Error adding note:', error);
+      console.error("Error adding note:", error);
       toast({
         title: "Error",
         description: "Failed to add note",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -68,7 +76,7 @@ const AddNoteModal = ({ user, open, onOpenChange, onNoteAdded }: AddNoteModalPro
           <DialogTitle>Add Note for {user?.full_name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          <Textarea 
+          <Textarea
             placeholder="Add your note here..."
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -79,7 +87,7 @@ const AddNoteModal = ({ user, open, onOpenChange, onNoteAdded }: AddNoteModalPro
               Cancel
             </Button>
             <Button onClick={handleAddNote} disabled={loading}>
-              {loading ? 'Adding...' : 'Add Note'}
+              {loading ? "Adding..." : "Add Note"}
             </Button>
           </div>
         </div>

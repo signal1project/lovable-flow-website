@@ -35,7 +35,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ErrorLogger />
-          <DebugAuthState />
+          {/* <DebugAuthState /> */}
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/about" element={<About />} />
