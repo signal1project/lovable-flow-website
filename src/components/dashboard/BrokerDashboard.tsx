@@ -1,15 +1,31 @@
-import { useAuth } from '@/components/auth/AuthProvider';
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useProfileCompletion } from '@/hooks/useProfileCompletion';
-import { useFileOperations } from '@/hooks/useFileOperations';
-import { Upload, FileText, Building, Crown, AlertCircle, Trash2, Download, ExternalLink } from 'lucide-react';
-import FileDeleteConfirmDialog from './FileDeleteConfirmDialog';
+import { useAuth } from "@/components/auth/AuthProvider";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useProfileCompletion } from "@/hooks/useProfileCompletion";
+import { useFileOperations } from "@/hooks/useFileOperations";
+import {
+  Upload,
+  FileText,
+  Building,
+  Crown,
+  AlertCircle,
+  Trash2,
+  Download,
+  ExternalLink,
+} from "lucide-react";
+import FileDeleteConfirmDialog from "./FileDeleteConfirmDialog";
 
 interface BrokerData {
   agency_name?: string;
@@ -23,6 +39,8 @@ interface BrokerFile {
   file_url: string;
   extracted_summary?: string;
   created_at: string;
+  file_name?: string;
+  file_url_path?: string;
 }
 
 const BrokerDashboard = () => {
@@ -30,7 +48,14 @@ const BrokerDashboard = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { isComplete, loading: completionLoading } = useProfileCompletion();
-  const { deleteFile, canDeleteFile, downloadFile, loading: deleteLoading } = useFileOperations();
+  const {
+    deleteFile,
+    canDeleteFile,
+    downloadFile,
+    uploadUserFile,
+    loading: fileLoading,
+  } = useFileOperations();
+
   const [brokerData, setBrokerData] = useState<BrokerData | null>(null);
   const [brokerFiles, setBrokerFiles] = useState<BrokerFile[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -45,21 +70,21 @@ const BrokerDashboard = () => {
 
   const fetchBrokerData = async () => {
     if (!user) return;
-    
+
     try {
       const { data, error } = await supabase
-        .from('brokers')
-        .select('*')
-        .eq('profile_id', user.id) // Use profile_id instead of id
+        .from("brokers")
+        .select("*")
+        .eq("id", user.id)
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching broker data:', error);
+      if (error && error.code !== "PGRST116") {
+        console.error("Error fetching broker data:", error);
       } else {
         setBrokerData(data);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
     } finally {
       setLoading(false);
     }
@@ -67,66 +92,45 @@ const BrokerDashboard = () => {
 
   const fetchBrokerFiles = async () => {
     if (!user) return;
-    
+
+    let files: BrokerFile[] = [];
     try {
       const { data, error } = await supabase
-        .from('broker_files')
-        .select('*')
-        .eq('broker_id', user.id)
-        .order('created_at', { ascending: false });
+        .from("broker_files")
+        .select("*")
+        .eq("broker_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (error) {
-        console.error('Error fetching broker files:', error);
+        console.error("Error fetching broker files:", error);
       } else {
-        setBrokerFiles(data || []);
+        files = data || [];
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
     }
+    setBrokerFiles(files);
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle file upload using useFileOperations hook
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file || !user) return;
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('broker_files')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('broker_files')
-        .getPublicUrl(fileName);
-
-      const { error: insertError } = await supabase
-        .from('broker_files')
-        .insert({
-          broker_id: user.id,
-          file_url: publicUrl,
-          file_type: fileExt,
-        });
-
-      if (insertError) throw insertError;
-
-      toast({
-        title: "File uploaded successfully",
-        description: "Your client file has been uploaded.",
+      await uploadUserFile({
+        bucket: "broker_files",
+        tableName: "broker_files",
+        userId: user.id,
+        file,
+        folder: user.id,
       });
-
-      fetchBrokerFiles();
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      toast({
-        title: "Upload failed",
-        description: "There was an error uploading your file.",
-        variant: "destructive",
-      });
+      await fetchBrokerFiles();
+    } catch {
+      // error handled inside hook
     } finally {
       setUploading(false);
     }
@@ -142,26 +146,19 @@ const BrokerDashboard = () => {
 
     const fileData = {
       ...fileToDelete,
-      broker_id: user?.id
+      broker_id: user?.id,
     };
 
     const success = await deleteFile(fileData);
     if (success) {
-      setBrokerFiles(brokerFiles.filter(f => f.id !== fileToDelete.id));
+      setBrokerFiles(brokerFiles.filter((f) => f.id !== fileToDelete.id));
       setShowDeleteDialog(false);
       setFileToDelete(null);
     }
   };
 
   const getFileName = (file: BrokerFile) => {
-    if (file.file_type) return `${file.file_type} file`;
-    try {
-      const url = new URL(file.file_url);
-      const fileName = url.pathname.split('/').pop();
-      return fileName || 'Document';
-    } catch {
-      return 'Document';
-    }
+    return file.file_name || file.file_type || "Document";
   };
 
   if (loading || completionLoading) {
@@ -190,13 +187,16 @@ const BrokerDashboard = () => {
                 <div className="flex items-center space-x-3">
                   <AlertCircle className="h-5 w-5 text-orange-600" />
                   <div className="flex-1">
-                    <h3 className="text-lg font-medium text-orange-800">Complete Your Profile</h3>
+                    <h3 className="text-lg font-medium text-orange-800">
+                      Complete Your Profile
+                    </h3>
                     <p className="text-orange-700">
-                      Complete your broker profile to unlock all features and start uploading client files.
+                      Complete your broker profile to unlock all features and
+                      start uploading client files.
                     </p>
                   </div>
                   <Button
-                    onClick={() => navigate('/profile-completion')}
+                    onClick={() => navigate("/profile-completion")}
                     className="bg-orange-600 hover:bg-orange-700 text-white"
                   >
                     Complete Profile
@@ -210,20 +210,30 @@ const BrokerDashboard = () => {
             {/* Agency Info Card */}
             <Card>
               <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <CardTitle className="text-lg font-medium">Agency Information</CardTitle>
+                <CardTitle className="text-lg font-medium">
+                  Agency Information
+                </CardTitle>
                 <Building className="h-5 w-5 text-teal-600 ml-auto" />
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <p><strong>Agency:</strong> {brokerData?.agency_name || 'Not set'}</p>
-                  <p><strong>Country:</strong> {profile?.country}</p>
-                  <p><strong>Client Notes:</strong> {brokerData?.client_notes || 'None'}</p>
+                  <p>
+                    <strong>Agency:</strong>{" "}
+                    {brokerData?.agency_name || "Not set"}
+                  </p>
+                  <p>
+                    <strong>Country:</strong> {profile?.country}
+                  </p>
+                  <p>
+                    <strong>Client Notes:</strong>{" "}
+                    {brokerData?.client_notes || "None"}
+                  </p>
                 </div>
                 {!brokerData?.agency_name && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full mt-4"
-                    onClick={() => navigate('/profile-completion')}
+                    onClick={() => navigate("/profile-completion")}
                   >
                     Complete Profile
                   </Button>
@@ -234,22 +244,23 @@ const BrokerDashboard = () => {
             {/* Subscription Card */}
             <Card>
               <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <CardTitle className="text-lg font-medium">Subscription</CardTitle>
+                <CardTitle className="text-lg font-medium">
+                  Subscription
+                </CardTitle>
                 <Crown className="h-5 w-5 text-teal-600 ml-auto" />
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <p className="text-lg font-semibold capitalize">
-                    {brokerData?.subscription_tier || 'Free'} Plan
+                    {brokerData?.subscription_tier || "Free"} Plan
                   </p>
                   <p className="text-sm text-gray-600">
-                    {brokerData?.subscription_tier === 'free' ? 
-                      'Limited file uploads and matching' : 
-                      'Full access to all features'
-                    }
+                    {brokerData?.subscription_tier === "free"
+                      ? "Limited file uploads and matching"
+                      : "Full access to all features"}
                   </p>
                 </div>
-                {brokerData?.subscription_tier === 'free' && (
+                {brokerData?.subscription_tier === "free" && (
                   <Button className="w-full mt-4 bg-teal-600 hover:bg-teal-700">
                     Upgrade Plan
                   </Button>
@@ -260,7 +271,9 @@ const BrokerDashboard = () => {
             {/* Upload Files Card */}
             <Card>
               <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <CardTitle className="text-lg font-medium">Upload Client Files</CardTitle>
+                <CardTitle className="text-lg font-medium">
+                  Upload Client Files
+                </CardTitle>
                 <FileText className="h-5 w-5 text-teal-600 ml-auto" />
               </CardHeader>
               <CardContent>
@@ -268,22 +281,24 @@ const BrokerDashboard = () => {
                   <p className="text-sm text-gray-600">
                     Upload .3.4 files, credit reports, or other client documents
                   </p>
-                  
+
                   <div className="relative">
                     <input
                       type="file"
-                      accept=".34,.pdf,.doc,.docx,.txt"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png"
                       onChange={handleFileUpload}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      disabled={uploading}
+                      disabled={fileLoading || uploading}
                     />
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="w-full"
-                      disabled={uploading}
+                      disabled={fileLoading || uploading}
                     >
                       <Upload className="h-4 w-4 mr-2" />
-                      {uploading ? 'Uploading...' : 'Upload New File'}
+                      {fileLoading || uploading
+                        ? "Uploading..."
+                        : "Upload New File"}
                     </Button>
                   </div>
                 </div>
@@ -294,7 +309,9 @@ const BrokerDashboard = () => {
           {/* Client Files Table */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-medium">Client Files</CardTitle>
+              <CardTitle className="text-lg font-medium">
+                Client Files
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {brokerFiles.length > 0 ? (
@@ -311,7 +328,7 @@ const BrokerDashboard = () => {
                     {brokerFiles.map((file) => (
                       <TableRow key={file.id}>
                         <TableCell className="capitalize">
-                          {file.file_type || 'Unknown'}
+                          {file.file_type || "Unknown"}
                         </TableCell>
                         <TableCell>
                           {new Date(file.created_at).toLocaleDateString()}
@@ -322,33 +339,41 @@ const BrokerDashboard = () => {
                               {file.extracted_summary.substring(0, 50)}...
                             </span>
                           ) : (
-                            <span className="text-sm text-gray-500">Processing...</span>
+                            <span className="text-sm text-gray-500">
+                              Processing...
+                            </span>
                           )}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="sm"
-                              onClick={() => window.open(file.file_url, '_blank')}
+                              onClick={() =>
+                                window.open(file.file_url, "_blank")
+                              }
                               title="View file"
                             >
                               <ExternalLink className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="sm"
-                              onClick={() => downloadFile(file.file_url, getFileName(file))}
+                              onClick={() => downloadFile(file.file_url_path, file.file_name)}
                               title="Download file"
                             >
                               <Download className="h-4 w-4" />
                             </Button>
-                            {canDeleteFile({ ...file, broker_id: user?.id }) && (
-                              <Button 
-                                variant="ghost" 
+                            {canDeleteFile({
+                              ...file,
+                              broker_id: user?.id,
+                            }) && (
+                              <Button
+                                variant="ghost"
                                 size="sm"
+                                className="text-red-600"
                                 onClick={() => handleDeleteClick(file)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                disabled={fileLoading}
                                 title="Delete file"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -364,7 +389,8 @@ const BrokerDashboard = () => {
                 <div className="text-center py-8">
                   <p className="text-gray-500">No client files uploaded yet</p>
                   <p className="text-sm text-gray-400 mt-2">
-                    Upload your first client file to get started with lender matching
+                    Upload your first client file to get started with lender
+                    matching
                   </p>
                 </div>
               )}
@@ -378,7 +404,7 @@ const BrokerDashboard = () => {
         onOpenChange={setShowDeleteDialog}
         onConfirm={handleDeleteConfirm}
         fileName={fileToDelete ? getFileName(fileToDelete) : undefined}
-        loading={deleteLoading}
+        loading={fileLoading}
       />
     </>
   );

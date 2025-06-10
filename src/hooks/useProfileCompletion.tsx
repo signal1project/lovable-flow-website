@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,7 +24,7 @@ export const useProfileCompletion = (): ProfileCompletionStatus => {
           const { data, error } = await supabase
             .from('lenders')
             .select('*')
-            .eq('profile_id', user.id) // Use profile_id instead of id
+            .eq('id', user.id)
             .maybeSingle();
 
           if (error && error.code !== 'PGRST116') {
@@ -38,7 +37,7 @@ export const useProfileCompletion = (): ProfileCompletionStatus => {
           const { data, error } = await supabase
             .from('brokers')
             .select('*')
-            .eq('profile_id', user.id) // Use profile_id instead of id
+            .eq('id', user.id)
             .maybeSingle();
 
           if (error && error.code !== 'PGRST116') {

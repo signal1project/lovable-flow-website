@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -23,10 +22,13 @@ interface FileViewerModalProps {
 interface FileData {
   id: string;
   file_url: string;
+  file_url_path: string;
+  file_name: string;
   file_type?: string;
   created_at: string;
   extracted_summary?: string;
   broker_id?: string;
+  lender_id?: string;
 }
 
 const FileViewerModal = ({ user, open, onOpenChange }: FileViewerModalProps) => {
@@ -35,7 +37,7 @@ const FileViewerModal = ({ user, open, onOpenChange }: FileViewerModalProps) => 
   const [fileToDelete, setFileToDelete] = useState<FileData | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { toast } = useToast();
-  const { deleteFile, canDeleteFile, downloadFile, loading: deleteLoading } = useFileOperations();
+  const { deleteFile, canDeleteFile, loading: deleteLoading } = useFileOperations();
 
   useEffect(() => {
     if (open && user) {
@@ -54,26 +56,10 @@ const FileViewerModal = ({ user, open, onOpenChange }: FileViewerModalProps) => 
           .select('*')
           .eq('broker_id', user.id);
       } else if (user.role === 'lender') {
-        // For lenders, we'll check if they have a guideline file
-        const { data: lenderData } = await supabase
-          .from('lenders')
-          .select('guideline_file_url')
-          .eq('id', user.id)
-          .single();
-        
-        if (lenderData?.guideline_file_url) {
-          setFiles([{
-            id: 'guideline',
-            file_url: lenderData.guideline_file_url,
-            file_type: 'guideline',
-            created_at: new Date().toISOString(),
-            extracted_summary: 'Lender guideline document'
-          }]);
-        } else {
-          setFiles([]);
-        }
-        setLoading(false);
-        return;
+        query = supabase
+          .from('lender_files')
+          .select('*')
+          .eq('lender_id', user.id);
       } else {
         setFiles([]);
         setLoading(false);
@@ -96,8 +82,40 @@ const FileViewerModal = ({ user, open, onOpenChange }: FileViewerModalProps) => 
     }
   };
 
-  const handleFileView = (fileUrl: string) => {
-    window.open(fileUrl, '_blank');
+  const handleFileView = (file: FileData) => {
+    const bucket = file.broker_id ? "broker_files" : "lender_files";
+    const { data } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(file.file_url_path);
+    window.open(data.publicUrl, '_blank');
+  };
+
+  const handleDownload = async (file: FileData) => {
+    try {
+      const bucket = file.broker_id ? "broker_files" : "lender_files";
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .download(file.file_url_path);
+
+      if (error) throw error;
+
+      // Create a download link
+      const url = window.URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.file_name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download file",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteClick = (file: FileData) => {
@@ -121,17 +139,6 @@ const FileViewerModal = ({ user, open, onOpenChange }: FileViewerModalProps) => 
       setFiles(files.filter(f => f.id !== fileToDelete.id));
       setShowDeleteDialog(false);
       setFileToDelete(null);
-    }
-  };
-
-  const getFileName = (file: FileData) => {
-    if (file.file_type) return `${file.file_type} file`;
-    try {
-      const url = new URL(file.file_url);
-      const fileName = url.pathname.split('/').pop();
-      return fileName || 'Document';
-    } catch {
-      return 'Document';
     }
   };
 
@@ -160,7 +167,7 @@ const FileViewerModal = ({ user, open, onOpenChange }: FileViewerModalProps) => 
                       <div className="flex items-center gap-2 mb-2">
                         <FileText className="h-4 w-4" />
                         <span className="font-medium">
-                          {getFileName(file)}
+                          {file.file_name}
                         </span>
                         {file.file_type && (
                           <Badge variant="secondary" className="text-xs">
@@ -181,7 +188,7 @@ const FileViewerModal = ({ user, open, onOpenChange }: FileViewerModalProps) => 
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleFileView(file.file_url)}
+                        onClick={() => handleFileView(file)}
                         title="View file"
                       >
                         <ExternalLink className="h-4 w-4" />
@@ -189,7 +196,7 @@ const FileViewerModal = ({ user, open, onOpenChange }: FileViewerModalProps) => 
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => downloadFile(file.file_url, getFileName(file))}
+                        onClick={() => handleDownload(file)}
                         title="Download file"
                       >
                         <Download className="h-4 w-4" />
@@ -218,7 +225,7 @@ const FileViewerModal = ({ user, open, onOpenChange }: FileViewerModalProps) => 
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         onConfirm={handleDeleteConfirm}
-        fileName={fileToDelete ? getFileName(fileToDelete) : undefined}
+        fileName={fileToDelete ? fileToDelete.file_name : undefined}
         loading={deleteLoading}
       />
     </>

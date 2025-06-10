@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, FileText, Building } from "lucide-react";
+import { Users, FileText, Building, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import UserDetailModal from "./UserDetailModal";
@@ -9,6 +9,11 @@ import AddNoteModal from "./AddNoteModal";
 import UserTable from "./UserTable";
 import SearchBar from "./SearchBar";
 import FileViewerModal from "./FileViewerModal";
+import { RealtimeChannel } from '@supabase/supabase-js';
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { useProfileCompletion } from "@/hooks/useProfileCompletion";
 
 interface DashboardStats {
   totalLenders: number;
@@ -26,7 +31,42 @@ interface UserData {
   broker_data?: any;
 }
 
+interface FileData {
+  id: string;
+  file_url: string;
+  file_url_path: string;
+  file_name: string;
+  file_type?: string;
+  created_at: string;
+  broker_id?: string;
+  lender_id?: string;
+}
+
+interface Subscriptions {
+  profiles: RealtimeChannel;
+  brokers: RealtimeChannel;
+  lenders: RealtimeChannel;
+  brokerFiles: RealtimeChannel;
+  lenderFiles: RealtimeChannel;
+}
+
+interface RealtimePayload {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  new: any;
+  old: any;
+  schema: string;
+  table: string;
+}
+
+declare global {
+  interface Window {
+    subscriptions?: Subscriptions;
+  }
+}
+
 const AdminDashboard = () => {
+  const { profile, user } = useAuth();
+  const { isComplete } = useProfileCompletion();
   const [stats, setStats] = useState<DashboardStats>({
     totalLenders: 0,
     totalBrokers: 0,
@@ -42,10 +82,28 @@ const AdminDashboard = () => {
   const [showFileModal, setShowFileModal] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
+    // Check if user is authenticated and is an admin
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    if (profile?.role !== 'admin') {
+      navigate('/dashboard');
+      return;
+    }
+
     fetchDashboardData();
-  }, []);
+    setupRealtimeSubscriptions();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      cleanupSubscriptions();
+    };
+  }, [user, profile, navigate]);
 
   useEffect(() => {
     filterUsers();
@@ -53,65 +111,102 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch stats
-      const [lendersResult, brokersResult, filesResult] = await Promise.all([
-        supabase.from("lenders").select("id", { count: "exact" }),
-        supabase.from("brokers").select("id", { count: "exact" }),
-        supabase.from("broker_files").select("id", { count: "exact" }),
+      setLoading(true);
+      
+      // First fetch all active users
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, role, full_name, country, created_at")
+        .order("created_at", { ascending: false });
+
+      if (profilesError) {
+        throw new Error(`Failed to fetch profiles: ${profilesError.message}`);
+      }
+
+      if (!profiles) {
+        throw new Error('No profiles found');
+      }
+
+      // Get all active user IDs
+      const activeUserIds = profiles.map(profile => profile.id);
+      const activeBrokerIds = profiles.filter(p => p.role === 'broker').map(p => p.id);
+      const activeLenderIds = profiles.filter(p => p.role === 'lender').map(p => p.id);
+
+      // Fetch stats with proper filtering
+      const [
+        lendersResult,
+        brokersResult,
+        brokerFilesResult,
+        lenderFilesResult,
+      ] = await Promise.all([
+        supabase.from("lenders").select("id", { count: "exact" }).in("id", activeLenderIds),
+        supabase.from("brokers").select("id", { count: "exact" }).in("id", activeBrokerIds),
+        supabase.from("broker_files").select("id", { count: "exact" }).in("broker_id", activeBrokerIds),
+        supabase.from("lender_files").select("id", { count: "exact" }).in("lender_id", activeLenderIds),
       ]);
+
+      if (lendersResult.error) throw new Error(`Failed to fetch lenders: ${lendersResult.error.message}`);
+      if (brokersResult.error) throw new Error(`Failed to fetch brokers: ${brokersResult.error.message}`);
+      if (brokerFilesResult.error) throw new Error(`Failed to fetch broker files: ${brokerFilesResult.error.message}`);
+      if (lenderFilesResult.error) throw new Error(`Failed to fetch lender files: ${lenderFilesResult.error.message}`);
+
+      // Calculate total files
+      const totalFiles = (brokerFilesResult.count || 0) + (lenderFilesResult.count || 0);
 
       setStats({
         totalLenders: lendersResult.count || 0,
         totalBrokers: brokersResult.count || 0,
-        totalFiles: filesResult.count || 0,
+        totalFiles: totalFiles,
       });
 
       // Fetch all users with their role-specific data
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      console.log("Fetched profiles:", profiles); // <-- Add here
-
-      if (profilesError) throw profilesError;
-
       const usersWithData = await Promise.all(
         profiles.map(async (profile) => {
-          let roleData = null;
+          try {
+            let roleData = null;
 
-          if (profile.role === "lender") {
-            const { data } = await supabase
-              .from("lenders")
-              .select("*")
-              .eq("id", profile.id)
-              .single();
-            roleData = data;
-          } else if (profile.role === "broker") {
-            const { data } = await supabase
-              .from("brokers")
-              .select("*")
-              .eq("id", profile.id)
-              .single();
-            roleData = data;
+            if (profile.role === "lender") {
+              const { data, error } = await supabase
+                .from("lenders")
+                .select("*")
+                .eq("id", profile.id)
+                .single();
+              
+              if (error) throw error;
+              roleData = data;
+            } else if (profile.role === "broker") {
+              const { data, error } = await supabase
+                .from("brokers")
+                .select("*")
+                .eq("id", profile.id)
+                .single();
+              
+              if (error) throw error;
+              roleData = data;
+            }
+
+            return {
+              ...profile,
+              lender_data: profile.role === "lender" ? roleData : null,
+              broker_data: profile.role === "broker" ? roleData : null,
+            };
+          } catch (error: any) {
+            console.error(`Error fetching data for user ${profile.id}:`, error);
+            return {
+              ...profile,
+              lender_data: null,
+              broker_data: null,
+            };
           }
-
-          return {
-            ...profile,
-            lender_data: profile.role === "lender" ? roleData : null,
-            broker_data: profile.role === "broker" ? roleData : null,
-          };
         })
       );
 
-      console.log("Users with role data:", usersWithData); // <-- Add here
-
       setUsers(usersWithData);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching dashboard data:", error);
       toast({
         title: "Error",
-        description: "Failed to load dashboard data",
+        description: error.message || "Failed to load dashboard data",
         variant: "destructive",
       });
     } finally {
@@ -122,14 +217,12 @@ const AdminDashboard = () => {
   const filterUsers = () => {
     let filtered = users;
 
-    // Filter by role based on active tab
     if (activeTab === "brokers") {
       filtered = filtered.filter((user) => user.role === "broker");
     } else if (activeTab === "lenders") {
       filtered = filtered.filter((user) => user.role === "lender");
     }
 
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(
         (user) =>
@@ -158,32 +251,242 @@ const AdminDashboard = () => {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this user? This action cannot be undone."
-      )
-    ) {
+    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
       return;
     }
-
     try {
-      const { error } = await supabase.auth.admin.deleteUser(userId);
-      if (error) throw error;
-
+      const response = await fetch('http://localhost:4000/admin/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete user');
+      }
+      await fetchDashboardData(); // Refresh all stats and users
       toast({
         title: "Success",
         description: "User deleted successfully",
+        variant: "default",
       });
-
-      fetchDashboardData();
-    } catch (error) {
-      console.error("Error deleting user:", error);
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
       toast({
         title: "Error",
-        description: "Failed to delete user",
+        description: error.message || "Failed to delete user",
         variant: "destructive",
       });
     }
+  };
+
+  const setupRealtimeSubscriptions = () => {
+    // Subscribe to profile changes
+    const profilesSubscription = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        async (payload) => {
+          console.log('Profile change:', payload);
+          await handleProfileChange(payload);
+        }
+      )
+      .subscribe();
+
+    // Subscribe to broker changes
+    const brokersSubscription = supabase
+      .channel('brokers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'brokers'
+        },
+        async (payload) => {
+          console.log('Broker change:', payload);
+          await handleBrokerChange(payload);
+        }
+      )
+      .subscribe();
+
+    // Subscribe to lender changes
+    const lendersSubscription = supabase
+      .channel('lenders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'lenders'
+        },
+        async (payload) => {
+          console.log('Lender change:', payload);
+          await handleLenderChange(payload);
+        }
+      )
+      .subscribe();
+
+    // Subscribe to file changes
+    const filesSubscription = supabase
+      .channel('files-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'broker_files'
+        },
+        async (payload) => {
+          console.log('Broker file change:', payload);
+          await handleFileChange(payload);
+        }
+      )
+      .subscribe();
+
+    const lenderFilesSubscription = supabase
+      .channel('lender-files-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'lender_files'
+        },
+        async (payload) => {
+          console.log('Lender file change:', payload);
+          await handleFileChange(payload);
+        }
+      )
+      .subscribe();
+
+    // Store subscriptions for cleanup
+    window.subscriptions = {
+      profiles: profilesSubscription,
+      brokers: brokersSubscription,
+      lenders: lendersSubscription,
+      brokerFiles: filesSubscription,
+      lenderFiles: lenderFilesSubscription
+    };
+  };
+
+  const cleanupSubscriptions = () => {
+    if (window.subscriptions) {
+      Object.values(window.subscriptions).forEach(subscription => {
+        subscription.unsubscribe();
+      });
+    }
+  };
+
+  const handleProfileChange = async (payload: RealtimePayload) => {
+    const { eventType, new: newRecord, old: oldRecord } = payload;
+
+    if (eventType === 'DELETE') {
+      setUsers(prevUsers => prevUsers.filter(user => user.id !== oldRecord.id));
+      await fetchDashboardData();
+    } else {
+      const updatedUser = await fetchUserWithRoleData(newRecord);
+      setUsers(prevUsers => {
+        const index = prevUsers.findIndex(user => user.id === newRecord.id);
+        if (index === -1) {
+          return [...prevUsers, updatedUser];
+        }
+        const newUsers = [...prevUsers];
+        newUsers[index] = updatedUser;
+        return newUsers;
+      });
+    }
+  };
+
+  const handleBrokerChange = async (payload: RealtimePayload) => {
+    const { eventType, new: newRecord } = payload;
+    
+    if (eventType === 'DELETE') {
+      await fetchDashboardData();
+    } else {
+      setUsers(prevUsers => {
+        return prevUsers.map(user => {
+          if (user.id === newRecord.id) {
+            return {
+              ...user,
+              broker_data: newRecord
+            };
+          }
+          return user;
+        });
+      });
+    }
+  };
+
+  const handleLenderChange = async (payload: RealtimePayload) => {
+    const { eventType, new: newRecord } = payload;
+    
+    if (eventType === 'DELETE') {
+      await fetchDashboardData();
+    } else {
+      setUsers(prevUsers => {
+        return prevUsers.map(user => {
+          if (user.id === newRecord.id) {
+            return {
+              ...user,
+              lender_data: newRecord
+            };
+          }
+          return user;
+        });
+      });
+    }
+  };
+
+  const handleFileChange = async (payload: RealtimePayload) => {
+    const { eventType } = payload;
+    
+    // Update file counts immediately
+    if (eventType === 'INSERT') {
+      setStats(prevStats => ({
+        ...prevStats,
+        totalFiles: prevStats.totalFiles + 1
+      }));
+    } else if (eventType === 'DELETE') {
+      setStats(prevStats => ({
+        ...prevStats,
+        totalFiles: Math.max(0, prevStats.totalFiles - 1) // Prevent negative counts
+      }));
+    } else {
+      // For updates or other events, refresh the full stats
+      await fetchDashboardData();
+    }
+  };
+
+  const fetchUserWithRoleData = async (profile: any) => {
+    let roleData = null;
+
+    if (profile.role === "lender") {
+      const { data } = await supabase
+        .from("lenders")
+        .select("*")
+        .eq("id", profile.id)
+        .single();
+      roleData = data;
+    } else if (profile.role === "broker") {
+      const { data } = await supabase
+        .from("brokers")
+        .select("*")
+        .eq("id", profile.id)
+        .single();
+      roleData = data;
+    }
+
+    return {
+      ...profile,
+      lender_data: profile.role === "lender" ? roleData : null,
+      broker_data: profile.role === "broker" ? roleData : null,
+    };
   };
 
   if (loading) {
@@ -203,6 +506,31 @@ const AdminDashboard = () => {
             Manage users, files, and platform overview
           </p>
         </div>
+
+        {/* Profile Completion Alert - Only show for non-admin users */}
+        {!isComplete && profile?.role !== 'admin' && (
+          <Card className="mb-6 border-orange-200 bg-orange-50">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3">
+                <AlertCircle className="h-5 w-5 text-orange-600" />
+                <div className="flex-1">
+                  <h3 className="text-lg font-medium text-orange-800">
+                    Complete Your Profile
+                  </h3>
+                  <p className="text-orange-700">
+                    Complete your profile to unlock all features.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => navigate("/profile-completion")}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  Complete Profile
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -271,29 +599,29 @@ const AdminDashboard = () => {
             </Tabs>
           </CardContent>
         </Card>
-      </div>
 
-      {selectedUser && (
-        <>
-          <UserDetailModal
-            user={selectedUser}
-            open={showUserModal}
-            onOpenChange={setShowUserModal}
-            onUserUpdated={fetchDashboardData}
-          />
-          <AddNoteModal
-            user={selectedUser}
-            open={showNoteModal}
-            onOpenChange={setShowNoteModal}
-            onNoteAdded={() => {}}
-          />
-          <FileViewerModal
-            user={selectedUser}
-            open={showFileModal}
-            onOpenChange={setShowFileModal}
-          />
-        </>
-      )}
+        {selectedUser && (
+          <>
+            <UserDetailModal
+              user={selectedUser}
+              open={showUserModal}
+              onOpenChange={setShowUserModal}
+              onUserUpdated={fetchDashboardData}
+            />
+            <AddNoteModal
+              user={selectedUser}
+              open={showNoteModal}
+              onOpenChange={setShowNoteModal}
+              onNoteAdded={() => {}}
+            />
+            <FileViewerModal
+              user={selectedUser}
+              open={showFileModal}
+              onOpenChange={setShowFileModal}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 };

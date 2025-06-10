@@ -1,0 +1,31 @@
+const express = require('express');
+const cors = require('cors');
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+app.post('/admin/delete-user', async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: 'User ID required' });
+
+  // Optionally: Add authentication/authorization here
+
+  const { error } = await supabase.auth.admin.deleteUser(userId);
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+  res.json({ success: true });
+});
+
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`Admin backend running on port ${PORT}`);
+}); 
