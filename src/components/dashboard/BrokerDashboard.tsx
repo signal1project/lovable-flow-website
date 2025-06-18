@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import FileDeleteConfirmDialog from "./FileDeleteConfirmDialog";
 import ProfileStatusBanner from '@/components/ProfileStatusBanner';
+import { Input } from "@/components/ui/input";
 
 interface BrokerData {
   agency_name?: string;
@@ -63,6 +64,7 @@ const BrokerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [fileToDelete, setFileToDelete] = useState<BrokerFile | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   useEffect(() => {
     fetchBrokerData();
@@ -162,6 +164,37 @@ const BrokerDashboard = () => {
     return file.file_name || file.file_type || "Document";
   };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const fileList = Array.from(files);
+      setSelectedFiles(fileList);
+    }
+  };
+
+  const handleUploadFiles = async () => {
+    if (selectedFiles.length === 0 || !user) return;
+
+    setUploading(true);
+    try {
+      for (const file of selectedFiles) {
+        await uploadUserFile({
+          bucket: "broker_files",
+          tableName: "broker_files",
+          userId: user.id,
+          file,
+          folder: user.id,
+        });
+      }
+      await fetchBrokerFiles();
+      setSelectedFiles([]);
+    } catch {
+      // error handled inside hook
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading || completionLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -181,192 +214,147 @@ const BrokerDashboard = () => {
         </div>
         <div>
           <ProfileStatusBanner className="mb-6" />
-          {/* Agency Info Card */}
-          <Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {/* Agency Info Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                <CardTitle className="text-lg font-medium">
+                  Agency Information
+                </CardTitle>
+                <Building className="h-5 w-5 text-teal-600 ml-auto" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p>
+                    <strong>Agency:</strong>{' '}
+                    {brokerData?.agency_name || 'Not set'}
+                  </p>
+                  <p>
+                    <strong>Country:</strong> {profile?.country}
+                  </p>
+                  <p>
+                    <strong>Client Notes:</strong>{' '}
+                    {brokerData?.client_notes || 'None'}
+                  </p>
+                </div>
+                {!brokerData?.agency_name && (
+                  <Button
+                    variant="outline"
+                    className="w-full mt-4"
+                    onClick={() => navigate('/profile-completion')}
+                  >
+                    Complete Profile
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+            {/* Subscription Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                <CardTitle className="text-lg font-medium">
+                  Subscription
+                </CardTitle>
+                <Crown className="h-5 w-5 text-teal-600 ml-auto" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p className="font-semibold">{brokerData?.subscription_tier === 'premium' ? 'Premium Plan' : brokerData?.subscription_tier === 'enterprise' ? 'Enterprise Plan' : 'Free Plan'}</p>
+                  <p className="text-gray-500 text-sm">
+                    {brokerData?.subscription_tier === 'premium' && 'Access to premium features'}
+                    {brokerData?.subscription_tier === 'enterprise' && 'Enterprise-level access'}
+                    {!brokerData?.subscription_tier || brokerData?.subscription_tier === 'free' ? 'Full access to all features' : ''}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            {/* Upload Client Files Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                <CardTitle className="text-lg font-medium">
+                  Upload Client Files
+                </CardTitle>
+                <FileText className="h-5 w-5 text-teal-600 ml-auto" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p className="text-gray-500 text-sm">
+                    Upload .3,4 files, credit reports, or other client documents
+                  </p>
+                  <input
+                    id="broker-file-upload"
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx,.xls,.xlsx"
+                    style={{ display: 'none' }}
+                    onChange={async (e) => {
+                      const files = e.target.files;
+                      if (!files || files.length === 0) return;
+                      setUploading(true);
+                      try {
+                        for (const file of Array.from(files)) {
+                          await uploadUserFile({
+                            bucket: "broker_files",
+                            tableName: "broker_files",
+                            userId: user.id,
+                            file,
+                            folder: user.id,
+                          });
+                        }
+                        await fetchBrokerFiles();
+                      } catch {
+                        // error handled inside hook
+                      } finally {
+                        setUploading(false);
+                        e.target.value = '';
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={() => document.getElementById('broker-file-upload')?.click()}
+                    disabled={uploading}
+                    className="w-full"
+                  >
+                    {uploading ? 'Uploading...' : 'Upload File'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          {/* Files Panel (full width) */}
+          <Card className="mb-8">
             <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-              <CardTitle className="text-lg font-medium">
-                Agency Information
-              </CardTitle>
-              <Building className="h-5 w-5 text-teal-600 ml-auto" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p>
-                  <strong>Agency:</strong>{' '}
-                  {brokerData?.agency_name || 'Not set'}
-                </p>
-                <p>
-                  <strong>Country:</strong> {profile?.country}
-                </p>
-                <p>
-                  <strong>Client Notes:</strong>{' '}
-                  {brokerData?.client_notes || 'None'}
-                </p>
-              </div>
-              {!brokerData?.agency_name && (
-                <Button
-                  variant="outline"
-                  className="w-full mt-4"
-                  onClick={() => navigate('/profile-completion')}
-                >
-                  Complete Profile
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-          {/* Subscription Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-              <CardTitle className="text-lg font-medium">
-                Subscription
-              </CardTitle>
-              <Crown className="h-5 w-5 text-teal-600 ml-auto" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-lg font-semibold capitalize">
-                  {brokerData?.subscription_tier || "Free"} Plan
-                </p>
-                <p className="text-sm text-gray-600">
-                  {brokerData?.subscription_tier === "free"
-                    ? "Limited file uploads and matching"
-                    : "Full access to all features"}
-                </p>
-              </div>
-              {brokerData?.subscription_tier === "free" && (
-                <Button className="w-full mt-4 bg-teal-600 hover:bg-teal-700">
-                  Upgrade Plan
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-          {/* Upload Files Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-              <CardTitle className="text-lg font-medium">
-                Upload Client Files
-              </CardTitle>
+              <CardTitle className="text-lg font-medium">Files</CardTitle>
               <FileText className="h-5 w-5 text-teal-600 ml-auto" />
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <p className="text-sm text-gray-600">
-                  Upload .3.4 files, credit reports, or other client documents
-                </p>
-
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png"
-                    onChange={handleFileUpload}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    disabled={fileLoading || uploading}
-                  />
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    disabled={fileLoading || uploading}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {fileLoading || uploading
-                      ? "Uploading..."
-                      : "Upload New File"}
-                  </Button>
+              {brokerFiles.length === 0 ? (
+                <div className="text-center text-gray-400 py-8">
+                  <p className="mb-2">No files uploaded yet</p>
+                  <p className="text-sm">Upload your first file to see it listed here</p>
                 </div>
-              </div>
+              ) : (
+                <ul className="divide-y divide-gray-200">
+                  {brokerFiles.map((file) => (
+                    <li key={file.id} className="flex items-center justify-between py-2">
+                      <div>
+                        <span className="font-medium">{file.file_name}</span>
+                        <span className="ml-2 text-xs text-gray-500">{new Date(file.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="ghost" size="sm" onClick={() => downloadFile(file.file_url_path, file.file_name)}>
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleDeleteClick(file)} disabled={fileLoading}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
         </div>
-        {/* Client Files Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-medium">
-              Client Files
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {brokerFiles.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>File Type</TableHead>
-                    <TableHead>Upload Date</TableHead>
-                    <TableHead>Summary</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {brokerFiles.map((file) => (
-                    <TableRow key={file.id}>
-                      <TableCell className="capitalize">
-                        {file.file_type || "Unknown"}
-                      </TableCell>
-                      <TableCell>
-                        {new Date(file.created_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        {file.extracted_summary ? (
-                          <span className="text-sm text-gray-700">
-                            {file.extracted_summary.substring(0, 50)}...
-                          </span>
-                        ) : (
-                          <span className="text-sm text-gray-500">
-                            Processing...
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              window.open(file.file_url, "_blank")
-                            }
-                            title="View file"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => downloadFile(file.file_url_path, file.file_name)}
-                            title="Download file"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          {canDeleteFile({
-                            ...file,
-                            broker_id: user?.id,
-                          }) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-600"
-                              onClick={() => handleDeleteClick(file)}
-                              disabled={fileLoading}
-                              title="Delete file"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No client files uploaded yet</p>
-                <p className="text-sm text-gray-400 mt-2">
-                  Upload your first client file to get started with lender
-                  matching
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       <FileDeleteConfirmDialog

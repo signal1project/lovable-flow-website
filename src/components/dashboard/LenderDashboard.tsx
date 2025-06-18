@@ -9,6 +9,7 @@ import { useProfileCompletion } from "@/hooks/useProfileCompletion";
 import { Upload, FileText, Building, Target, AlertCircle, Trash2, Download, ExternalLink } from "lucide-react";
 import { useFileOperations } from "@/hooks/useFileOperations";
 import ProfileStatusBanner from '@/components/ProfileStatusBanner';
+import { Input } from '@/components/ui/input';
 
 interface LenderData {
   company_name?: string;
@@ -16,6 +17,7 @@ interface LenderData {
   criteria_summary?: string;
   guideline_file_url?: string;
   id?: string;
+  contact_info?: string;
 }
 
 interface LenderFile {
@@ -37,6 +39,8 @@ const LenderDashboard = () => {
   const [lenderFiles, setLenderFiles] = useState<LenderFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const matchingRequests: any[] = [];
 
   const {
     uploadUserFile,
@@ -92,22 +96,30 @@ const LenderDashboard = () => {
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !user) return;
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      setSelectedFiles(Array.from(files));
+    }
+  };
 
+  const handleUploadFiles = async () => {
+    if (selectedFiles.length === 0 || !user) return;
     setUploading(true);
     try {
-      await uploadUserFile({
-        bucket: "lender_files",
-        tableName: "lender_files",
-        userId: user.id,
-        file,
-        folder: user.id,
-      });
+      for (const file of selectedFiles) {
+        await uploadUserFile({
+          bucket: 'lender_files',
+          tableName: 'lender_files',
+          userId: user.id,
+          file,
+          folder: user.id,
+        });
+      }
       await fetchLenderFiles();
-    } catch (error) {
-      // Errors handled inside hook
+      setSelectedFiles([]);
+    } catch {
+      // error handled inside hook
     } finally {
       setUploading(false);
     }
@@ -145,8 +157,8 @@ const LenderDashboard = () => {
         </div>
         <div>
           <ProfileStatusBanner className="mb-6" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Company Info Card */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {/* Company Information Card */}
             <Card>
               <CardHeader className="flex flex-row items-center space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium">
@@ -155,105 +167,170 @@ const LenderDashboard = () => {
                 <Building className="h-5 w-5 text-teal-600 ml-auto" />
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Company Name</p>
-                    <p className="text-lg">{lenderData?.company_name || "Not set"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Specialization</p>
-                    <p className="text-lg">{lenderData?.specialization || "Not set"}</p>
-                  </div>
+                <div className="space-y-2">
+                  <p>
+                    <strong>Company Name:</strong> {lenderData?.company_name || 'Not set'}
+                  </p>
+                  <p>
+                    <strong>Specialization:</strong> {lenderData?.specialization || 'Not set'}
+                  </p>
+                  <p>
+                    <strong>Contact Info:</strong> {lenderData?.contact_info || 'Not set'}
+                  </p>
+                  <p>
+                    <strong>Criteria Summary:</strong> {lenderData?.criteria_summary || 'Not set'}
+                  </p>
                 </div>
+                {!lenderData?.company_name && (
+                  <Button
+                    variant="outline"
+                    className="w-full mt-4"
+                    onClick={() => navigate('/profile-completion')}
+                  >
+                    Complete Profile
+                  </Button>
+                )}
               </CardContent>
             </Card>
-
-            {/* Files Card */}
+            {/* Upload Guidelines Card */}
             <Card>
               <CardHeader className="flex flex-row items-center space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium">
-                  Your Files
+                  Upload Guidelines
                 </CardTitle>
                 <FileText className="h-5 w-5 text-teal-600 ml-auto" />
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {lenderFiles.length > 0 ? (
-                    lenderFiles.map((file) => (
-                      <div
-                        key={file.id}
-                        className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                      >
-                        <span className="text-sm text-gray-700">
-                          {file.file_name}
-                        </span>
+                <div className="space-y-2">
+                  <p className="text-gray-500 text-sm">
+                    Upload your lending guidelines or other relevant documents (PDF, DOC, DOCX)
+                  </p>
+                  <input
+                    id="lender-file-upload"
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx"
+                    style={{ display: 'none' }}
+                    onChange={async (e) => {
+                      const files = e.target.files;
+                      if (!files || files.length === 0) return;
+                      setUploading(true);
+                      try {
+                        for (const file of Array.from(files)) {
+                          await uploadUserFile({
+                            bucket: "lender_files",
+                            tableName: "lender_files",
+                            userId: user.id,
+                            file,
+                            folder: user.id,
+                          });
+                        }
+                        await fetchLenderFiles();
+                      } catch {
+                        // error handled inside hook
+                      } finally {
+                        setUploading(false);
+                        e.target.value = '';
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={() => document.getElementById('lender-file-upload')?.click()}
+                    disabled={uploading}
+                    className="w-full"
+                  >
+                    {uploading ? 'Uploading...' : 'Upload File'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            {/* Files Card (remove from grid) */}
+            {/* <Card>
+              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                <CardTitle className="text-lg font-medium">Files</CardTitle>
+                <FileText className="h-5 w-5 text-teal-600 ml-auto" />
+              </CardHeader>
+              <CardContent>
+                {lenderFiles.length === 0 ? (
+                  <div className="text-center text-gray-400 py-8">
+                    <p className="mb-2">No files uploaded yet</p>
+                    <p className="text-sm">Upload your first file to see it listed here</p>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-gray-200">
+                    {lenderFiles.map((file) => (
+                      <li key={file.id} className="flex items-center justify-between py-2">
                         <div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="mr-2"
-                            onClick={() => downloadFile(file.file_url_path, file.file_name)}
-                          >
+                          <span className="font-medium">{file.file_name}</span>
+                          <span className="ml-2 text-xs text-gray-500">{new Date(file.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button variant="ghost" size="sm" onClick={() => downloadFile(file.file_url_path, file.file_name)}>
                             <Download className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600"
-                            onClick={() => handleFileDelete(file)}
-                            disabled={fileLoading}
-                          >
+                          <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleFileDelete(file)} disabled={fileLoading}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-gray-500">
-                      No files uploaded yet
-                    </p>
-                  )}
-                  <div className="relative">
-                    <input
-                      type="file"
-                      accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png"
-                      onChange={handleFileUpload}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      disabled={fileLoading || uploading}
-                    />
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      disabled={fileLoading || uploading}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      {fileLoading || uploading
-                        ? "Uploading..."
-                        : "Upload New File"}
-                    </Button>
-                  </div>
-                </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </CardContent>
-            </Card>
-
-            {/* Matching Requests Card */}
-            <Card className="md:col-span-2 lg:col-span-3">
-              <CardHeader>
-                <CardTitle className="text-lg font-medium">
-                  Recent Matching Requests
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No matching requests available</p>
-                  <p className="text-sm text-gray-400 mt-2">
-                    Matching requests will appear here when brokers submit files
-                    that match your criteria
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            </Card> */}
           </div>
+          {/* Files Panel (full width) */}
+          <Card className="mb-8">
+            <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+              <CardTitle className="text-lg font-medium">Files</CardTitle>
+              <FileText className="h-5 w-5 text-teal-600 ml-auto" />
+            </CardHeader>
+            <CardContent>
+              {lenderFiles.length === 0 ? (
+                <div className="text-center text-gray-400 py-8">
+                  <p className="mb-2">No files uploaded yet</p>
+                  <p className="text-sm">Upload your first file to see it listed here</p>
+                </div>
+              ) : (
+                <ul className="divide-y divide-gray-200">
+                  {lenderFiles.map((file) => (
+                    <li key={file.id} className="flex items-center justify-between py-2">
+                      <div>
+                        <span className="font-medium">{file.file_name}</span>
+                        <span className="ml-2 text-xs text-gray-500">{new Date(file.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="ghost" size="sm" onClick={() => downloadFile(file.file_url_path, file.file_name)}>
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleFileDelete(file)} disabled={fileLoading}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+          {/* Recent Matching Requests Section */}
+          <Card className="mb-8">
+            <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+              <CardTitle className="text-lg font-medium">Recent Matching Requests</CardTitle>
+              <FileText className="h-5 w-5 text-teal-600 ml-auto" />
+            </CardHeader>
+            <CardContent>
+              {matchingRequests.length === 0 ? (
+                <div className="text-center text-gray-400 py-8">
+                  <p className="mb-2">No matching requests available</p>
+                  <p className="text-sm">Matching requests will appear here when brokers submit files that match your criteria</p>
+                </div>
+              ) : (
+                // ...existing matching requests table/content...
+                <div>Matching requests table goes here</div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

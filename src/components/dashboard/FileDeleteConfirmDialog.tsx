@@ -1,4 +1,3 @@
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +17,11 @@ interface FileDeleteConfirmDialogProps {
   loading?: boolean;
 }
 
+const getBaseName = (fileName?: string) => {
+  if (!fileName) return '';
+  return fileName.split('/').pop() || fileName;
+};
+
 const FileDeleteConfirmDialog = ({ 
   open, 
   onOpenChange, 
@@ -25,13 +29,35 @@ const FileDeleteConfirmDialog = ({
   fileName,
   loading = false 
 }: FileDeleteConfirmDialogProps) => {
+  const baseName = getBaseName(fileName);
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete File</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete {fileName ? `"${fileName}"` : 'this file'}? 
+            Are you sure you want to delete
+            {baseName && (
+              <span
+                style={{
+                  display: 'inline-block',
+                  maxWidth: 240,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  verticalAlign: 'bottom',
+                  whiteSpace: 'nowrap',
+                  fontWeight: 600,
+                  fontFamily: 'monospace',
+                  marginLeft: 4,
+                  marginRight: 4,
+                  color: '#374151',
+                }}
+                title={baseName}
+              >
+                "{baseName}"
+              </span>
+            )}?
+            <br />
             This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>

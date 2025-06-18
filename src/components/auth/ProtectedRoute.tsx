@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -47,18 +46,13 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (!profile) {
-    return <Navigate to="/onboarding" replace />;
-  }
-
-  if (requiredRole && profile.role !== requiredRole) {
+  if (requiredRole && profile && profile.role !== requiredRole) {
     // Redirect to correct dashboard based on actual role
     const redirectMap = {
       lender: '/dashboard/lender',
       broker: '/dashboard/broker',
       admin: '/dashboard/admin'
     };
-    
     const correctDashboard = redirectMap[profile.role as keyof typeof redirectMap] || '/dashboard';
     return <Navigate to={correctDashboard} replace />;
   }

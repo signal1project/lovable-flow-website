@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -32,14 +31,14 @@ const RegisterForm = () => {
   useEffect(() => {
     if (user && profile) {
       console.log('🔄 Redirecting user after signup based on role:', profile.role);
-      
-      // Direct to role-specific onboarding or dashboard
-      if (profile.role === 'admin') {
-        navigate('/dashboard/admin');
-      } else {
-        // Lenders and brokers go to onboarding first
-        navigate('/onboarding');
-      }
+      // Redirect all roles to their dashboard
+      const dashboardRoutes = {
+        admin: '/dashboard/admin',
+        lender: '/dashboard/lender',
+        broker: '/dashboard/broker',
+      };
+      const route = dashboardRoutes[profile.role] || '/dashboard';
+      navigate(route);
     }
   }, [user, profile, navigate]);
 

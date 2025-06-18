@@ -140,6 +140,7 @@ export const useFileOperations = () => {
       const sanitizedFileName = sanitizeFileName(file.name);
       const path = folder ? `${folder}/${sanitizedFileName}` : sanitizedFileName;
 
+      console.log('[uploadUserFile] Uploading to storage:', { bucket, path, file });
       // 1. Upload file to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucket)
@@ -149,11 +150,19 @@ export const useFileOperations = () => {
         });
 
       if (uploadError) {
-        console.error("Upload error:", uploadError);
+        console.error('[uploadUserFile] Upload error:', uploadError);
         throw new Error("Failed to upload file to storage");
       }
+      console.log('[uploadUserFile] Uploaded to storage:', uploadData);
 
       // 2. Insert metadata record into DB
+      console.log('[uploadUserFile] Inserting file record into DB:', {
+        tableName,
+        userId,
+        file_url: uploadData.path,
+        file_name: sanitizedFileName,
+        file_type: file.type,
+      });
       const { error: dbError } = await supabase
         .from(tableName)
         .insert({
@@ -168,9 +177,10 @@ export const useFileOperations = () => {
       if (dbError) {
         // Cleanup uploaded file on failure
         await supabase.storage.from(bucket).remove([uploadData.path]);
-        console.error("Database error:", dbError);
+        console.error('[uploadUserFile] Database error:', dbError);
         throw new Error("Failed to save file metadata to database");
       }
+      console.log('[uploadUserFile] Inserted file record into DB');
 
       toast({
         title: "Success",
@@ -179,7 +189,7 @@ export const useFileOperations = () => {
 
       return uploadData.path;
     } catch (error: any) {
-      console.error("Upload file error:", error);
+      console.error("[uploadUserFile] Upload file error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to upload file",
