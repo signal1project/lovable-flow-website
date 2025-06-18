@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -89,6 +88,35 @@ const BrokerOnboarding = () => {
     }
   };
 
+  const handleSkip = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('brokers')
+        .upsert({
+          id: user.id,
+          profile_id: user.id,
+          profile_completed: false,
+        });
+      if (error) throw error;
+      toast({
+        title: "Profile setup skipped",
+        description: "You can complete your profile later from the dashboard.",
+      });
+      navigate('/dashboard/broker');
+    } catch (error: any) {
+      console.error('❌ Error skipping broker onboarding:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
@@ -156,9 +184,20 @@ const BrokerOnboarding = () => {
               </p>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Setting up profile..." : "Complete Setup"}
-            </Button>
+            <div className="flex space-x-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSkip}
+                className="flex-1"
+                disabled={loading}
+              >
+                Skip for Now
+              </Button>
+              <Button type="submit" className="flex-1" disabled={loading}>
+                {loading ? "Setting up profile..." : "Complete Setup"}
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

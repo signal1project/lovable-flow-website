@@ -31,7 +31,8 @@ export const useProfileCompletion = (): ProfileCompletionStatus => {
             console.error('Error checking lender profile:', error);
             setIsComplete(false);
           } else {
-            setIsComplete(!!data && !!data.company_name && !!data.specialization);
+            // Check both profile_completed flag and required fields
+            setIsComplete(!!data && data.profile_completed === true && !!data.company_name && !!data.specialization);
           }
         } else if (profile.role === 'broker') {
           const { data, error } = await supabase
@@ -44,7 +45,8 @@ export const useProfileCompletion = (): ProfileCompletionStatus => {
             console.error('Error checking broker profile:', error);
             setIsComplete(false);
           } else {
-            setIsComplete(!!data && !!data.agency_name);
+            // Check both profile_completed flag and required fields
+            setIsComplete(!!data && data.profile_completed === true && !!data.agency_name);
           }
         } else if (profile.role === 'admin') {
           // Admins don't need additional profile completion

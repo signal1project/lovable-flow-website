@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -37,6 +36,7 @@ const BrokerProfileCompletion = () => {
           agency_name: formData.agencyName,
           client_notes: formData.clientNotes,
           subscription_tier: formData.subscriptionTier,
+          profile_completed: true, // Add this field to track completion
         });
 
       if (error) throw error;
@@ -49,6 +49,41 @@ const BrokerProfileCompletion = () => {
       navigate('/dashboard/broker');
     } catch (error: any) {
       console.error('❌ Broker profile completion error:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSkip = async () => {
+    if (!user) return;
+
+    setLoading(true);
+
+    try {
+      // Create a minimal broker record to indicate the user has skipped
+      const { error } = await supabase
+        .from('brokers')
+        .upsert({
+          id: user.id,
+          profile_id: user.id,
+          profile_completed: false, // Mark as not completed
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Profile setup skipped",
+        description: "You can complete your profile later from the dashboard.",
+      });
+
+      navigate('/dashboard/broker');
+    } catch (error: any) {
+      console.error('❌ Error skipping broker profile:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -116,8 +151,9 @@ const BrokerProfileCompletion = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate('/dashboard/broker')}
+                onClick={handleSkip}
                 className="flex-1"
+                disabled={loading}
               >
                 Skip for Now
               </Button>
