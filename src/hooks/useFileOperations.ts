@@ -56,32 +56,37 @@ export const useFileOperations = () => {
     setLoading(true);
     try {
       if (!file.file_url_path) {
+        console.error('[deleteFile] File path missing for deletion', file);
         throw new Error("File path missing for deletion");
       }
 
       const bucket = file.broker_id ? "broker_files" : "lender_files";
       const table = file.broker_id ? "broker_files" : "lender_files";
 
+      console.log('[deleteFile] Attempting to delete file:', { file, bucket, table });
+
       // Remove from storage
-      const { error: storageError } = await supabase.storage
+      const { error: storageError, data: storageData } = await supabase.storage
         .from(bucket)
         .remove([file.file_url_path]);
 
       if (storageError) {
-        console.error("Storage deletion error:", storageError);
+        console.error("[deleteFile] Storage deletion error:", storageError, { file, bucket });
         throw new Error("Failed to delete file from storage");
       }
+      console.log('[deleteFile] Storage deletion success:', storageData);
 
       // Remove DB record
-      const { error: dbError } = await supabase
+      const { error: dbError, data: dbData } = await supabase
         .from(table)
         .delete()
         .eq("id", file.id);
 
       if (dbError) {
-        console.error("Database deletion error:", dbError);
+        console.error("[deleteFile] Database deletion error:", dbError, { file, table });
         throw new Error("Failed to delete file record from database");
       }
+      console.log('[deleteFile] Database deletion success:', dbData);
 
       toast({
         title: "Success",
@@ -90,7 +95,7 @@ export const useFileOperations = () => {
 
       return true;
     } catch (error: any) {
-      console.error("Delete file error:", error);
+      console.error("[deleteFile] Delete file error:", error, file);
       toast({
         title: "Error",
         description: error.message || "Failed to delete file",

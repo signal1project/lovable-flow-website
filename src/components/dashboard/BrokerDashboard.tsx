@@ -146,15 +146,13 @@ const BrokerDashboard = () => {
 
   const handleDeleteConfirm = async () => {
     if (!fileToDelete) return;
-
     const fileData = {
       ...fileToDelete,
       broker_id: user?.id,
     };
-
     const success = await deleteFile(fileData);
     if (success) {
-      setBrokerFiles(brokerFiles.filter((f) => f.id !== fileToDelete.id));
+      await fetchBrokerFiles();
       setShowDeleteDialog(false);
       setFileToDelete(null);
     }
@@ -193,6 +191,12 @@ const BrokerDashboard = () => {
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleFileView = (file: BrokerFile) => {
+    const bucket = 'broker_files';
+    const { data } = supabase.storage.from(bucket).getPublicUrl(file.file_url_path);
+    window.open(data.publicUrl, '_blank');
   };
 
   if (loading || completionLoading) {
@@ -341,10 +345,13 @@ const BrokerDashboard = () => {
                         <span className="ml-2 text-xs text-gray-500">{new Date(file.created_at).toLocaleDateString()}</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm" onClick={() => downloadFile(file.file_url_path, file.file_name)}>
+                        <Button variant="ghost" size="sm" onClick={() => handleFileView(file)} title="View file">
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => downloadFile('broker_files/' + file.file_url_path, file.file_name)} title="Download file">
                           <Download className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleDeleteClick(file)} disabled={fileLoading}>
+                        <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleDeleteClick(file)} disabled={fileLoading} title="Delete file">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

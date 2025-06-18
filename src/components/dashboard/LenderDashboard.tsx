@@ -10,6 +10,7 @@ import { Upload, FileText, Building, Target, AlertCircle, Trash2, Download, Exte
 import { useFileOperations } from "@/hooks/useFileOperations";
 import ProfileStatusBanner from '@/components/ProfileStatusBanner';
 import { Input } from '@/components/ui/input';
+import FileDeleteConfirmDialog from './FileDeleteConfirmDialog';
 
 interface LenderData {
   company_name?: string;
@@ -41,6 +42,8 @@ const LenderDashboard = () => {
   const [uploading, setUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const matchingRequests: any[] = [];
+  const [fileToDelete, setFileToDelete] = useState<LenderFile | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const {
     uploadUserFile,
@@ -125,17 +128,29 @@ const LenderDashboard = () => {
     }
   };
 
-  const handleFileDelete = async (file: LenderFile) => {
-    if (!file.id) return;
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this file?"
-    );
-    if (!confirmed) return;
+  const handleDeleteClick = (file: LenderFile) => {
+    setFileToDelete(file);
+    setShowDeleteDialog(true);
+  };
 
-    const success = await deleteFile(file);
+  const handleDeleteConfirm = async () => {
+    if (!fileToDelete) return;
+    const fileData = {
+      ...fileToDelete,
+      lender_id: user?.id,
+    };
+    const success = await deleteFile(fileData);
     if (success) {
       await fetchLenderFiles();
+      setShowDeleteDialog(false);
+      setFileToDelete(null);
     }
+  };
+
+  const handleFileView = (file: LenderFile) => {
+    const bucket = 'lender_files';
+    const { data } = supabase.storage.from(bucket).getPublicUrl(file.file_url_path);
+    window.open(data.publicUrl, '_blank');
   };
 
   if (loading || completionLoading) {
@@ -150,10 +165,10 @@ const LenderDashboard = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Lender Dashboard</h1>
-          <p className="text-gray-600">
-            Manage your lending profile and files
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome, {profile?.full_name}
+          </h1>
+          <p className="text-gray-600">Lender Dashboard</p>
         </div>
         <div>
           <ProfileStatusBanner className="mb-6" />
@@ -300,10 +315,13 @@ const LenderDashboard = () => {
                         <span className="ml-2 text-xs text-gray-500">{new Date(file.created_at).toLocaleDateString()}</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm" onClick={() => downloadFile(file.file_url_path, file.file_name)}>
+                        <Button variant="ghost" size="sm" onClick={() => handleFileView(file)} title="View file">
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => downloadFile('lender_files/' + file.file_url_path, file.file_name)} title="Download file">
                           <Download className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleFileDelete(file)} disabled={fileLoading}>
+                        <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleDeleteClick(file)} disabled={fileLoading} title="Delete file">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -333,6 +351,13 @@ const LenderDashboard = () => {
           </Card>
         </div>
       </div>
+      <FileDeleteConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={handleDeleteConfirm}
+        fileName={fileToDelete ? fileToDelete.file_name : undefined}
+        loading={fileLoading}
+      />
     </div>
   );
 };
