@@ -76,6 +76,7 @@ export type Database = {
           id: string
           profile_id: string | null
           subscription_tier: string | null
+          profile_completed: boolean
         }
         Insert: {
           agency_name?: string | null
@@ -84,6 +85,7 @@ export type Database = {
           id: string
           profile_id?: string | null
           subscription_tier?: string | null
+          profile_completed: boolean
         }
         Update: {
           agency_name?: string | null
@@ -92,6 +94,7 @@ export type Database = {
           id?: string
           profile_id?: string | null
           subscription_tier?: string | null
+          profile_completed?: boolean
         }
         Relationships: [
           {
@@ -120,6 +123,7 @@ export type Database = {
           id: string
           profile_id: string | null
           specialization: string | null
+          profile_completed: boolean
         }
         Insert: {
           company_name?: string | null
@@ -130,6 +134,7 @@ export type Database = {
           id: string
           profile_id?: string | null
           specialization?: string | null
+          profile_completed: boolean
         }
         Update: {
           company_name?: string | null
@@ -140,6 +145,7 @@ export type Database = {
           id?: string
           profile_id?: string | null
           specialization?: string | null
+          profile_completed?: boolean
         }
         Relationships: [
           {

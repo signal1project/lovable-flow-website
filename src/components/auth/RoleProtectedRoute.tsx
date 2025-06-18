@@ -19,11 +19,6 @@ const RoleProtectedRoute = ({ children, allowedRole }: RoleProtectedRouteProps) 
         description: "Please sign in to access this page",
         variant: "destructive",
       });
-    } else if (!loading && user && !profile) {
-      toast({
-        title: "Profile Required",
-        description: "Please complete your profile setup",
-      });
     } else if (!loading && user && profile && profile.role !== allowedRole) {
       toast({
         title: "Access Denied",

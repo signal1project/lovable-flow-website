@@ -19,13 +19,8 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
         description: "Please sign in to access this page",
         variant: "destructive",
       });
-    } else if (!loading && user && !profile) {
-      console.log('User exists but no profile found, redirecting to onboarding');
-      toast({
-        title: "Profile Setup Required",
-        description: "Please complete your profile setup",
-      });
-    } else if (!loading && user && profile && requiredRole && profile.role !== requiredRole) {
+    }
+    else if (!loading && user && profile && requiredRole && profile.role !== requiredRole) {
       toast({
         title: "Access Denied",
         description: "You don't have permission to access this page",

@@ -249,14 +249,14 @@ const LenderDashboard = () => {
                       }
                     }}
                   />
-                  <Button
-                    onClick={() => document.getElementById('lender-file-upload')?.click()}
-                    disabled={uploading}
-                    className="w-full"
-                  >
-                    {uploading ? 'Uploading...' : 'Upload File'}
-                  </Button>
                 </div>
+                <Button
+                  onClick={() => document.getElementById('lender-file-upload')?.click()}
+                  disabled={uploading}
+                  className="w-full mt-4"
+                >
+                  {uploading ? 'Uploading...' : 'Upload File'}
+                </Button>
               </CardContent>
             </Card>
             {/* Files Card (remove from grid) */}

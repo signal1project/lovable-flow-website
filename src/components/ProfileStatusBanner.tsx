@@ -10,12 +10,12 @@ interface ProfileStatusBannerProps {
 }
 
 const ProfileStatusBanner = ({ className = 'mb-6' }: ProfileStatusBannerProps) => {
-  const { user, profile, loading, refreshProfile } = useAuth();
-  const { isComplete } = useProfileCompletion();
+  const { user, profile, loading: authLoading, refreshProfile } = useAuth();
+  const { isComplete, loading: completionLoading } = useProfileCompletion();
   const navigate = useNavigate();
 
   // Don't show banner if still loading or user not authenticated
-  if (loading || !user) {
+  if (authLoading || completionLoading || !user) {
     return null;
   }
 

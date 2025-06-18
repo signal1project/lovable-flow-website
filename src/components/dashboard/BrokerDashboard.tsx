@@ -313,14 +313,14 @@ const BrokerDashboard = () => {
                       }
                     }}
                   />
-                  <Button
-                    onClick={() => document.getElementById('broker-file-upload')?.click()}
-                    disabled={uploading}
-                    className="w-full"
-                  >
-                    {uploading ? 'Uploading...' : 'Upload File'}
-                  </Button>
                 </div>
+                <Button
+                  onClick={() => document.getElementById('broker-file-upload')?.click()}
+                  disabled={uploading}
+                  className="w-full mt-4"
+                >
+                  {uploading ? 'Uploading...' : 'Upload File'}
+                </Button>
               </CardContent>
             </Card>
           </div>
