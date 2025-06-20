@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { AdminNotesNotifications } from './AdminNotesNotifications';
 
 const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -100,6 +101,7 @@ const Navigation = () => {
                     Dashboard
                   </Button>
                 </Link>
+                <AdminNotesNotifications />
                 <Button
                   variant="ghost"
                   onClick={handleSignOut}

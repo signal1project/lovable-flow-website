@@ -173,23 +173,6 @@ const LenderDashboard = () => {
 
   return (
     <>
-      {adminNotes.length > 0 && (
-        <Card className="mb-4">
-          <CardHeader>
-            <CardTitle>Admin Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul>
-              {adminNotes.map(note => (
-                <li key={note.id} className="mb-2">
-                  <div>{note.note}</div>
-                  <div className="text-xs text-gray-400">{new Date(note.created_at).toLocaleString()}</div>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
