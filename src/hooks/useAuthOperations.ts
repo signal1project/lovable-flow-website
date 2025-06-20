@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { UserData } from "@/types/auth";
 import { createProfile } from "@/utils/profileOperations";
+import { SupabaseClient } from '@supabase/supabase-js';
 
 const allowedRoles = ["lender", "broker", "admin"] as const;
 type Role = (typeof allowedRoles)[number];
@@ -32,7 +33,7 @@ export const useAuthOperations = () => {
     const role = userData.role.toLowerCase();
 
     if (!allowedRoles.includes(role as Role)) {
-      return { error: { message: `Invalid role: ${userData.role}` } };
+      return { error: { message: `Invalid role: ${userData.role}` }, user: null };
     }
 
     const { data, error } = await supabase.auth.signUp({
@@ -47,7 +48,7 @@ export const useAuthOperations = () => {
       },
     });
 
-    return { error };
+    return { error, user: data?.user ?? null };
   };
 
   const signInWithGoogle = async () => {
@@ -66,14 +67,6 @@ export const useAuthOperations = () => {
 
   const signOut = async () => {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      console.log("Session before signOut:", session);
-      if (!session) {
-        console.warn("No active session found.");
-        return;
-      }
       await supabase.auth.signOut();
     } catch (error) {
       console.error("Error during signOut:", error);

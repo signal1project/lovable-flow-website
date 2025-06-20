@@ -65,10 +65,20 @@ const BrokerDashboard = () => {
   const [fileToDelete, setFileToDelete] = useState<BrokerFile | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [adminNotes, setAdminNotes] = useState<any[]>([]);
 
   useEffect(() => {
     fetchBrokerData();
     fetchBrokerFiles();
+    if (!profile?.id) return;
+    supabase
+      .from('admin_notes')
+      .select('*')
+      .eq('user_id', profile.id)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error) setAdminNotes(data || []);
+      });
   }, [user]);
 
   const fetchBrokerData = async () => {
@@ -218,6 +228,23 @@ const BrokerDashboard = () => {
         </div>
         <div>
           <ProfileStatusBanner className="mb-6" />
+          {adminNotes.length > 0 && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>Admin Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul>
+                  {adminNotes.map(note => (
+                    <li key={note.id} className="mb-2">
+                      <div>{note.note}</div>
+                      <div className="text-xs text-gray-400">{new Date(note.created_at).toLocaleString()}</div>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {/* Agency Info Card */}
             <Card>

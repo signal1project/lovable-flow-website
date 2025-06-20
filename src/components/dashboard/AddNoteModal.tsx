@@ -45,6 +45,7 @@ const AddNoteModal = ({
       const { error } = await supabase.from("admin_notes").insert({
         note: note.trim(),
         created_by: currentUser?.id || null,
+        user_id: user?.id,
       });
 
       if (error) throw error;

@@ -82,7 +82,7 @@ const RegisterForm = () => {
         country: country,
       };
 
-      const { error: signUpError } = await signUp(email, password, userData);
+      const { error: signUpError, data } = await signUp(email, password, userData);
 
       if (signUpError) {
         console.error('❌ Signup failed:', signUpError);
@@ -101,6 +101,24 @@ const RegisterForm = () => {
           });
         }
         return;
+      }
+
+      // Create profile row after successful signup
+      if (data && data.user) {
+        const { error: profileError } = await supabase.from('profiles').insert({
+          id: data.user.id,
+          full_name: fullName,
+          role: role,
+          country: country,
+        });
+        if (profileError) {
+          toast({
+            title: "Profile Creation Failed",
+            description: profileError.message,
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
       console.log('✅ User signup successful');

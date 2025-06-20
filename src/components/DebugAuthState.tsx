@@ -1,68 +1,57 @@
-
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { fetchProfile, createProfile } from '@/utils/profileOperations';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Button } from './ui/button';
 
 const DebugAuthState = () => {
-  const { user, profile, loading } = useAuth();
-  
-  // Only show in development
-  if (process.env.NODE_ENV !== 'development') {
-    return null;
-  }
+  const { user, profile, loading, refreshProfile } = useAuth();
+  const [debugLog, setDebugLog] = useState<string>('');
+
+  const handleDebug = async () => {
+    let log = '';
+    if (!user) {
+      log += 'No user logged in.\n';
+      setDebugLog(log);
+      return;
+    }
+    log += `User ID: ${user.id}\n`;
+    // Try to fetch profile
+    const prof = await fetchProfile(user.id);
+    if (prof) {
+      log += `Profile found: ${JSON.stringify(prof, null, 2)}\n`;
+    } else {
+      log += 'Profile not found. Attempting to create...\n';
+      try {
+        const newProf = await createProfile(user, {
+          full_name: user.user_metadata?.full_name || 'Debug User',
+          role: user.user_metadata?.role || 'lender',
+          country: user.user_metadata?.country || 'US',
+        });
+        log += `Profile created: ${JSON.stringify(newProf, null, 2)}\n`;
+      } catch (err) {
+        log += `Error creating profile: ${err?.message || err}\n`;
+      }
+    }
+    setDebugLog(log);
+  };
+
+  const handleRefreshProfile = async () => {
+    setDebugLog('Calling refreshProfile...');
+    await refreshProfile();
+    setDebugLog('refreshProfile called. Check if Profile updated above.');
+  };
 
   return (
-    <Card className="fixed bottom-4 right-4 w-80 max-h-96 overflow-auto bg-black/90 text-white border-gray-600">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-green-400">🐛 Debug Auth State</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 text-xs">
-        <div>
-          <Badge variant={loading ? "destructive" : "default"} className="mb-1">
-            Loading: {loading ? 'true' : 'false'}
-          </Badge>
-        </div>
-        
-        <div>
-          <span className="text-blue-300">User:</span>
-          {user ? (
-            <div className="ml-2 space-y-1">
-              <div>ID: {user.id}</div>
-              <div>Email: {user.email}</div>
-              <div>Verified: {user.email_confirmed_at ? '✅' : '❌'}</div>
-            </div>
-          ) : (
-            <span className="text-red-300 ml-2">null</span>
-          )}
-        </div>
-
-        <div>
-          <span className="text-blue-300">Profile:</span>
-          {profile ? (
-            <div className="ml-2 space-y-1">
-              <div>ID: {profile.id}</div>
-              <div>Name: {profile.full_name}</div>
-              <div>Role: {profile.role}</div>
-              <div>Country: {profile.country}</div>
-            </div>
-          ) : (
-            <span className="text-red-300 ml-2">null</span>
-          )}
-        </div>
-
-        <div>
-          <span className="text-blue-300">Current Route:</span>
-          <div className="ml-2">{window.location.pathname}</div>
-        </div>
-
-        <div>
-          <span className="text-blue-300">Expected Redirect:</span>
-          <div className="ml-2">
-            {profile?.role ? `/dashboard/${profile.role}` : 'Unknown'}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div style={{ background: '#fee', padding: 16, margin: 16, border: '1px solid #f00' }}>
+      <h3>Debug Auth State</h3>
+      <div>User: {user ? user.id : 'null'}</div>
+      <div>Profile: {profile ? JSON.stringify(profile) : 'null'}</div>
+      <div>Loading: {loading ? 'true' : 'false'}</div>
+      <Button onClick={handleDebug}>Run Debug</Button>
+      <Button onClick={handleRefreshProfile} style={{ marginLeft: 8 }}>Refresh Profile (App Logic)</Button>
+      <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>{debugLog}</pre>
+    </div>
   );
 };
 

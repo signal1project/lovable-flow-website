@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Profile, AuthContextType } from '@/types/auth';
 import { fetchProfile } from '@/utils/profileOperations';
 import { useAuthOperations } from '@/hooks/useAuthOperations';
+import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -121,6 +122,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const { signIn, signUp, signInWithGoogle, signOut } = useAuthOperations();
+  const navigate = useNavigate();
 
   useEffect(() => {
     console.log(DEBUG + 'user:', user, 'profile:', profile, 'loading:', loading);
@@ -151,26 +153,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           } catch (err) {
             console.error(DEBUG + ' Error in ensureProfileAndRoleRows:', err);
           }
-          console.log(DEBUG + ' before setTimeout in getSession');
-          setTimeout(async () => {
-            console.log(DEBUG + ' inside setTimeout in getSession');
-            // Retry fetching profile up to 5 times with a short delay
-            let profileData = null;
-            for (let i = 0; i < 5; i++) {
-              console.log(DEBUG + ' calling fetchProfile from getSession', session.user.id);
-              profileData = await fetchProfile(session.user.id);
-              if (profileData) break;
-              await new Promise(res => setTimeout(res, 200));
-            }
-            if (!profileData) {
-              console.error(DEBUG + '[AuthProvider] Failed to fetch profile after retries for user:', session.user.id);
-            }
-            setProfile(profileData);
-            console.log(DEBUG + 'setProfile (getSession):', profileData);
-          }, 500);
+          // Always fetch profile after ensuring it exists, retry up to 5 times
+          let profileData = null;
+          for (let i = 0; i < 5; i++) {
+            console.log(DEBUG + ' calling fetchProfile from getSession', session.user.id);
+            profileData = await fetchProfile(session.user.id);
+            if (profileData) break;
+            await new Promise(res => setTimeout(res, 200));
+          }
+          if (!profileData) {
+            console.error(DEBUG + '[AuthProvider] Failed to fetch profile after retries for user:', session.user.id);
+          }
+          setProfile(profileData);
+          console.log(DEBUG + 'setProfile (getSession):', profileData);
+        } else {
+          setProfile(null);
         }
       } catch (error) {
         console.error(DEBUG + '❌ Error getting session:', error);
+        setProfile(null);
       } finally {
         setLoading(false);
       }
@@ -181,13 +182,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log(DEBUG + ' onAuthStateChange handler running', event, session);
-        setUser(session?.user ?? null);
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setProfile(null);
+          navigate('/login', { replace: true });
+        } else if (session?.user) {
+          setUser(session.user);
+          // Always fetch profile after user is set, retry up to 5 times
+          (async () => {
+            let profileData = null;
+            for (let i = 0; i < 5; i++) {
+              console.log(DEBUG + ' calling fetchProfile from onAuthStateChange', session.user.id);
+              profileData = await fetchProfile(session.user.id);
+              if (profileData) break;
+              await new Promise(res => setTimeout(res, 200));
+            }
+            setProfile(profileData);
+            console.log(DEBUG + 'setProfile (onAuthStateChange):', profileData);
+          })();
+        } else {
+          setProfile(null);
+        }
         setLoading(false);
       }
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   const value = {
     user,
