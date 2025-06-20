@@ -134,9 +134,17 @@ const FileViewerModal = ({ user, open, onOpenChange }: FileViewerModalProps) => 
   const handleDeleteConfirm = async () => {
     if (!fileToDelete) return;
 
-    const success = await deleteFile(fileToDelete);
+    // Ensure correct broker_id/lender_id for admin context
+    let fileData = { ...fileToDelete };
+    if (user.role === 'broker' && !fileData.broker_id) {
+      fileData.broker_id = user.id;
+    } else if (user.role === 'lender' && !fileData.lender_id) {
+      fileData.lender_id = user.id;
+    }
+
+    const success = await deleteFile(fileData);
     if (success) {
-      setFiles(files.filter(f => f.id !== fileToDelete.id));
+      await fetchUserFiles(); // Always refresh from backend
       setShowDeleteDialog(false);
       setFileToDelete(null);
     }
@@ -145,7 +153,7 @@ const FileViewerModal = ({ user, open, onOpenChange }: FileViewerModalProps) => 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="max-w-full sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>Files for {user?.full_name}</DialogTitle>
           </DialogHeader>
@@ -162,12 +170,17 @@ const FileViewerModal = ({ user, open, onOpenChange }: FileViewerModalProps) => 
             ) : (
               <div className="space-y-3">
                 {files.map((file) => (
-                  <div key={file.id} className="border rounded-lg p-4 flex items-center justify-between">
-                    <div className="flex-1">
+                  <div key={file.id} className="border rounded-lg p-4 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
                         <FileText className="h-4 w-4" />
-                        <span className="font-medium">
-                          {file.file_name}
+                        <span
+                          className="font-medium truncate"
+                          title={file.file_name}
+                        >
+                          {file.file_name.length > 48
+                            ? file.file_name.slice(0, 48) + '...'
+                            : file.file_name}
                         </span>
                         {file.file_type && (
                           <Badge variant="secondary" className="text-xs">
@@ -184,7 +197,7 @@ const FileViewerModal = ({ user, open, onOpenChange }: FileViewerModalProps) => 
                         Uploaded: {new Date(file.created_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0 mt-2 md:mt-0">
                       <Button
                         size="sm"
                         variant="outline"

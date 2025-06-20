@@ -13,7 +13,6 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { useProfileCompletion } from "@/hooks/useProfileCompletion";
 
 interface DashboardStats {
   totalLenders: number;
@@ -66,7 +65,6 @@ declare global {
 
 const AdminDashboard = () => {
   const { profile, user } = useAuth();
-  const { isComplete } = useProfileCompletion();
   const [stats, setStats] = useState<DashboardStats>({
     totalLenders: 0,
     totalBrokers: 0,
@@ -85,31 +83,17 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is authenticated and is an admin
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    if (profile?.role !== 'admin') {
-      navigate('/dashboard');
-      return;
-    }
-
+    if (!user || !profile || profile.role !== 'admin') return;
     fetchDashboardData();
-    setupRealtimeSubscriptions();
-
-    // Cleanup subscriptions on unmount
-    return () => {
-      cleanupSubscriptions();
-    };
-  }, [user, profile, navigate]);
+    // Only run when user/profile/role become valid
+  }, [user?.id, profile?.role]);
 
   useEffect(() => {
     filterUsers();
   }, [searchTerm, users, activeTab]);
 
   const fetchDashboardData = async () => {
+    console.log('[AdminDashboard] fetchDashboardData called');
     try {
       setLoading(true);
       
@@ -384,12 +368,12 @@ const AdminDashboard = () => {
   };
 
   const handleProfileChange = async (payload: RealtimePayload) => {
+    console.log('[AdminDashboard] handleProfileChange', payload);
     const { eventType, new: newRecord, old: oldRecord } = payload;
 
-    if (eventType === 'DELETE') {
-      setUsers(prevUsers => prevUsers.filter(user => user.id !== oldRecord.id));
+    if (eventType === 'DELETE' || eventType === 'INSERT') {
       await fetchDashboardData();
-    } else {
+    } else if (eventType === 'UPDATE') {
       const updatedUser = await fetchUserWithRoleData(newRecord);
       setUsers(prevUsers => {
         const index = prevUsers.findIndex(user => user.id === newRecord.id);
@@ -404,11 +388,11 @@ const AdminDashboard = () => {
   };
 
   const handleBrokerChange = async (payload: RealtimePayload) => {
+    console.log('[AdminDashboard] handleBrokerChange', payload);
     const { eventType, new: newRecord } = payload;
-    
-    if (eventType === 'DELETE') {
+    if (eventType === 'DELETE' || eventType === 'INSERT') {
       await fetchDashboardData();
-    } else {
+    } else if (eventType === 'UPDATE') {
       setUsers(prevUsers => {
         return prevUsers.map(user => {
           if (user.id === newRecord.id) {
@@ -424,11 +408,11 @@ const AdminDashboard = () => {
   };
 
   const handleLenderChange = async (payload: RealtimePayload) => {
+    console.log('[AdminDashboard] handleLenderChange', payload);
     const { eventType, new: newRecord } = payload;
-    
-    if (eventType === 'DELETE') {
+    if (eventType === 'DELETE' || eventType === 'INSERT') {
       await fetchDashboardData();
-    } else {
+    } else if (eventType === 'UPDATE') {
       setUsers(prevUsers => {
         return prevUsers.map(user => {
           if (user.id === newRecord.id) {
@@ -444,9 +428,9 @@ const AdminDashboard = () => {
   };
 
   const handleFileChange = async (payload: RealtimePayload) => {
+    console.log('[AdminDashboard] handleFileChange', payload);
     const { eventType } = payload;
-    
-    // Update file counts immediately
+    // Only update file count in state. Do NOT call fetchDashboardData to prevent refresh loops.
     if (eventType === 'INSERT') {
       setStats(prevStats => ({
         ...prevStats,
@@ -455,12 +439,10 @@ const AdminDashboard = () => {
     } else if (eventType === 'DELETE') {
       setStats(prevStats => ({
         ...prevStats,
-        totalFiles: Math.max(0, prevStats.totalFiles - 1) // Prevent negative counts
+        totalFiles: Math.max(0, prevStats.totalFiles - 1)
       }));
-    } else {
-      // For updates or other events, refresh the full stats
-      await fetchDashboardData();
     }
+    // Do nothing for UPDATE
   };
 
   const fetchUserWithRoleData = async (profile: any) => {
@@ -506,31 +488,6 @@ const AdminDashboard = () => {
             Manage users, files, and platform overview
           </p>
         </div>
-
-        {/* Profile Completion Alert - Only show for non-admin users */}
-        {!isComplete && profile?.role !== 'admin' && (
-          <Card className="mb-6 border-orange-200 bg-orange-50">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-3">
-                <AlertCircle className="h-5 w-5 text-orange-600" />
-                <div className="flex-1">
-                  <h3 className="text-lg font-medium text-orange-800">
-                    Complete Your Profile
-                  </h3>
-                  <p className="text-orange-700">
-                    Complete your profile to unlock all features.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => navigate("/profile-completion")}
-                  className="bg-orange-600 hover:bg-orange-700 text-white"
-                >
-                  Complete Profile
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -35,8 +34,17 @@ const DashboardRouter = () => {
   }
 
   if (!profile) {
-    console.log('No profile, redirecting to onboarding');
-    return <Navigate to="/onboarding" replace />;
+    // If loading is done, user exists, and profile is null, only redirect to onboarding for non-admins
+    if (!loading && user && (!profile || profile?.role !== 'admin')) {
+      console.log('No profile, redirecting to onboarding');
+      return <Navigate to="/onboarding" replace />;
+    }
+    // Otherwise, wait for profile to load
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-600"></div>
+      </div>
+    );
   }
 
   // Redirect to role-specific dashboard
