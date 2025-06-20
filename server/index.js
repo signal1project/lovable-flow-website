@@ -25,6 +25,18 @@ app.post('/admin/delete-user', async (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/admin/set-user-role', async (req, res) => {
+  const { userId, role } = req.body;
+  if (!userId || !role) return res.status(400).json({ error: 'Missing userId or role' });
+
+  const { data, error } = await supabase.auth.admin.updateUserById(userId, {
+    user_metadata: { role }
+  });
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ success: true, data });
+});
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Admin backend running on port ${PORT}`);

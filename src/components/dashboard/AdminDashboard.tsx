@@ -205,6 +205,8 @@ const AdminDashboard = () => {
       filtered = filtered.filter((user) => user.role === "broker");
     } else if (activeTab === "lenders") {
       filtered = filtered.filter((user) => user.role === "lender");
+    } else if (activeTab === "admins") {
+      filtered = filtered.filter((user) => user.role === "admin");
     }
 
     if (searchTerm) {
@@ -538,10 +540,11 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="all">All Users</TabsTrigger>
                 <TabsTrigger value="brokers">Brokers</TabsTrigger>
                 <TabsTrigger value="lenders">Lenders</TabsTrigger>
+                <TabsTrigger value="admins">Admins</TabsTrigger>
               </TabsList>
 
               <TabsContent value={activeTab} className="mt-6">

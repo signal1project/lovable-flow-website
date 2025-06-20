@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,11 @@ interface UserDetailModalProps {
   onOpenChange: (open: boolean) => void;
   onUserUpdated: () => void;
 }
+
+const countries = [
+  'United States', 'Canada', 'United Kingdom', 'Australia', 'Germany', 
+  'France', 'Spain', 'Italy', 'Netherlands', 'Sweden', 'Other'
+];
 
 const UserDetailModal = ({ user, open, onOpenChange, onUserUpdated }: UserDetailModalProps) => {
   const [loading, setLoading] = useState(false);
@@ -45,41 +49,82 @@ const UserDetailModal = ({ user, open, onOpenChange, onUserUpdated }: UserDetail
 
   const handleProfileUpdate = async () => {
     setLoading(true);
-    
     try {
+      // Detect role change
+      const oldRole = user.role;
+      const newRole = profileData.role;
+
       // Update profile data
-      const { error: profileError } = await supabase
+      console.log('user.id:', user.id);
+      console.log('profileData:', profileData);
+      const { error: profileError, data: profileUpdateData } = await supabase
         .from('profiles')
         .update(profileData)
-        .eq('id', user.id);
-      
+        .eq('id', user.id)
+        .select();
+      console.log('Profile update response:', profileUpdateData, 'Error:', profileError);
       if (profileError) throw profileError;
 
-      // Update role-specific data
-      if (profileData.role === 'lender') {
+      // If role changed, remove from old role table
+      if (oldRole !== newRole) {
+        if (oldRole === 'lender') {
+          const { error } = await supabase.from('lenders').delete().eq('id', user.id);
+          if (error) throw error;
+        } else if (oldRole === 'broker') {
+          const { error } = await supabase.from('brokers').delete().eq('id', user.id);
+          if (error) throw error;
+        }
+      }
+
+      // Upsert into new role table if needed
+      if (newRole === 'lender') {
+        const lenderUpsert = {
+          id: user.id,
+          profile_id: user.id,
+          company_name: roleSpecificData.company_name || '',
+          specialization: roleSpecificData.specialization || '',
+          criteria_summary: roleSpecificData.criteria_summary || '',
+          contact_info: roleSpecificData.contact_info || '',
+          profile_completed: false,
+        };
         const { error } = await supabase
           .from('lenders')
-          .upsert({ 
-            id: user.id,
-            ...roleSpecificData 
-          });
+          .upsert(lenderUpsert);
         if (error) throw error;
-      } 
-      else if (profileData.role === 'broker') {
+      } else if (newRole === 'broker') {
+        const brokerUpsert = {
+          id: user.id,
+          profile_id: user.id,
+          agency_name: roleSpecificData.agency_name || '',
+          client_notes: roleSpecificData.client_notes || '',
+          subscription_tier: roleSpecificData.subscription_tier || 'free',
+          profile_completed: false,
+        };
         const { error } = await supabase
           .from('brokers')
-          .upsert({ 
-            id: user.id,
-            ...roleSpecificData 
-          });
+          .upsert(brokerUpsert);
         if (error) throw error;
+      }
+
+      // After successful profile update, if role is set to admin, call backend to update user_metadata.role
+      if (newRole === 'admin') {
+        try {
+          const response = await fetch('http://localhost:4000/admin/set-user-role', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id, role: 'admin' })
+          });
+          const result = await response.json();
+          console.log('Backend role update result:', result);
+        } catch (err) {
+          console.error('Failed to update user_metadata.role to admin:', err);
+        }
       }
 
       toast({
         title: "Success",
         description: "User profile updated successfully"
       });
-      
       onUserUpdated();
       onOpenChange(false);
     } catch (error) {
@@ -203,7 +248,10 @@ const UserDetailModal = ({ user, open, onOpenChange, onUserUpdated }: UserDetail
             <Label htmlFor="role">Role</Label>
             <Select
               value={profileData.role}
-              onValueChange={(value) => setProfileData({ ...profileData, role: value })}
+              onValueChange={(value) => {
+                setProfileData({ ...profileData, role: value });
+                setRoleSpecificData({}); // Reset role-specific data on role change
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select role" />
@@ -218,11 +266,21 @@ const UserDetailModal = ({ user, open, onOpenChange, onUserUpdated }: UserDetail
 
           <div className="grid w-full gap-1.5">
             <Label htmlFor="country">Country</Label>
-            <Input
-              id="country"
+            <Select
               value={profileData.country || ''}
-              onChange={(e) => setProfileData({ ...profileData, country: e.target.value })}
-            />
+              onValueChange={(value) => setProfileData({ ...profileData, country: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select country" />
+              </SelectTrigger>
+              <SelectContent>
+                {countries.map((countryOption) => (
+                  <SelectItem key={countryOption} value={countryOption}>
+                    {countryOption}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <h3 className="text-lg font-semibold border-b pb-2 mt-4">Role Specific Information</h3>

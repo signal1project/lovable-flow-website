@@ -27,6 +27,7 @@ interface UserTableProps {
 const UserTable = ({ users, onUserClick, onAddNote, onViewFiles, onDeleteUser }: UserTableProps) => {
   const { toast } = useToast();
   const [modalUser, setModalUser] = useState<UserData | null>(null);
+  const [pendingDeleteUser, setPendingDeleteUser] = useState<UserData | null>(null);
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -43,11 +44,17 @@ const UserTable = ({ users, onUserClick, onAddNote, onViewFiles, onDeleteUser }:
 
   const getProfileStatus = (user: UserData) => {
     if (user.role === 'admin') return { status: 'N/A', variant: 'default' as const };
-    
-    const hasData = user.role === 'lender' ? user.lender_data : user.broker_data;
+
+    let isComplete = false;
+    if (user.role === 'lender' && user.lender_data) {
+      isComplete = !!user.lender_data.profile_completed;
+    } else if (user.role === 'broker' && user.broker_data) {
+      isComplete = !!user.broker_data.profile_completed;
+    }
+
     return {
-      status: hasData ? 'Complete' : 'Incomplete',
-      variant: hasData ? 'default' as const : 'destructive' as const
+      status: isComplete ? 'Complete' : 'Incomplete',
+      variant: isComplete ? 'default' as const : 'destructive' as const
     };
   };
 
@@ -127,27 +134,14 @@ const UserTable = ({ users, onUserClick, onAddNote, onViewFiles, onDeleteUser }:
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
-                    {user.role !== 'admin' && (
-                      <>
-                        {/* Hide the backend delete button for now */}
-                        {/* <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => onDeleteUser(user.id)}
-                          title="Delete User"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button> */}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setModalUser(user)}
-                          title="Manage Deletion"
-                        >
-                          Delete
-                        </Button>
-                      </>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => setPendingDeleteUser(user)}
+                      title="Delete User"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -185,6 +179,33 @@ const UserTable = ({ users, onUserClick, onAddNote, onViewFiles, onDeleteUser }:
                 }}
               >
                 Copy SQL to Delete Data
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Modal for confirming deletion */}
+      <Dialog open={!!pendingDeleteUser} onOpenChange={() => setPendingDeleteUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p>Are you sure you want to delete <b>{pendingDeleteUser?.full_name}</b>? This action cannot be undone.</p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setPendingDeleteUser(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (pendingDeleteUser) {
+                    onDeleteUser(pendingDeleteUser.id);
+                    setPendingDeleteUser(null);
+                  }
+                }}
+              >
+                Delete
               </Button>
             </div>
           </div>
