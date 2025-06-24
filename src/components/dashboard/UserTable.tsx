@@ -22,9 +22,10 @@ interface UserTableProps {
   onAddNote: (user: UserData) => void;
   onViewFiles: (user: UserData) => void;
   onDeleteUser: (userId: string) => void;
+  onNotesClick: (user: UserData) => void;
 }
 
-const UserTable = ({ users, onUserClick, onAddNote, onViewFiles, onDeleteUser }: UserTableProps) => {
+const UserTable = ({ users, onUserClick, onAddNote, onViewFiles, onDeleteUser, onNotesClick }: UserTableProps) => {
   const { toast } = useToast();
   const [modalUser, setModalUser] = useState<UserData | null>(null);
   const [pendingDeleteUser, setPendingDeleteUser] = useState<UserData | null>(null);
@@ -129,10 +130,10 @@ const UserTable = ({ users, onUserClick, onAddNote, onViewFiles, onDeleteUser }:
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => onAddNote(user)}
-                      title="Add Note"
+                      onClick={() => onNotesClick(user)}
+                      title="View Notes"
                     >
-                      <Plus className="h-4 w-4" />
+                      📝
                     </Button>
                     <Button
                       size="sm"

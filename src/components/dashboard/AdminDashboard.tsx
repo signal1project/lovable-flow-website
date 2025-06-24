@@ -13,6 +13,7 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/auth/AuthProvider";
+import AdminNotesModal from "./AdminNotesModal";
 
 interface DashboardStats {
   totalLenders: number;
@@ -79,6 +80,8 @@ const AdminDashboard = () => {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showFileModal, setShowFileModal] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const [selectedNotesUser, setSelectedNotesUser] = useState<UserData | null>(null);
+  const [showNotesModal, setShowNotesModal] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -234,6 +237,11 @@ const AdminDashboard = () => {
   const handleViewFiles = (user: UserData) => {
     setSelectedUser(user);
     setShowFileModal(true);
+  };
+
+  const handleNotesClick = (user: UserData) => {
+    setSelectedNotesUser(user);
+    setShowNotesModal(true);
   };
 
   const handleDeleteUser = async (userId: string) => {
@@ -554,6 +562,7 @@ const AdminDashboard = () => {
                   onAddNote={handleAddNote}
                   onViewFiles={handleViewFiles}
                   onDeleteUser={handleDeleteUser}
+                  onNotesClick={handleNotesClick}
                 />
               </TabsContent>
             </Tabs>
@@ -580,6 +589,13 @@ const AdminDashboard = () => {
               onOpenChange={setShowFileModal}
             />
           </>
+        )}
+        {selectedNotesUser && (
+          <AdminNotesModal
+            user={selectedNotesUser}
+            open={showNotesModal}
+            onOpenChange={setShowNotesModal}
+          />
         )}
       </div>
     </div>
