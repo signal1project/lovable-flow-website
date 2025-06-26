@@ -1,0 +1,2 @@
+To update the types (Adding or updating tables in the project)
+  npx supabase gen types typescript --project-id mclookprprkdcqsghadj > src/integrations/supabase/types.ts
