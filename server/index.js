@@ -25,7 +25,7 @@ app.post('/admin/delete-user', async (req, res) => {
   const { error } = await supabase.auth.admin.deleteUser(userId);
   if (error) {
     console.log('[DELETE USER] Supabase error object:', error);
-    return res.status(400).json({ error: error.message });
+    return res.status(400).json({ error: error.message, details: error });
   }
   console.log('[DELETE USER] Success for userId:', userId);
   res.json({ success: true });
