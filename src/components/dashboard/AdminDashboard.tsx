@@ -96,7 +96,6 @@ const AdminDashboard = () => {
   }, [searchTerm, users, activeTab]);
 
   const fetchDashboardData = async () => {
-    console.log('[AdminDashboard] fetchDashboardData called');
     try {
       setLoading(true);
       
@@ -286,7 +285,6 @@ const AdminDashboard = () => {
           table: 'profiles'
         },
         async (payload) => {
-          console.log('Profile change:', payload);
           await handleProfileChange(payload);
         }
       )
@@ -303,7 +301,6 @@ const AdminDashboard = () => {
           table: 'brokers'
         },
         async (payload) => {
-          console.log('Broker change:', payload);
           await handleBrokerChange(payload);
         }
       )
@@ -320,7 +317,6 @@ const AdminDashboard = () => {
           table: 'lenders'
         },
         async (payload) => {
-          console.log('Lender change:', payload);
           await handleLenderChange(payload);
         }
       )
@@ -337,7 +333,6 @@ const AdminDashboard = () => {
           table: 'broker_files'
         },
         async (payload) => {
-          console.log('Broker file change:', payload);
           await handleFileChange(payload);
         }
       )
@@ -353,7 +348,6 @@ const AdminDashboard = () => {
           table: 'lender_files'
         },
         async (payload) => {
-          console.log('Lender file change:', payload);
           await handleFileChange(payload);
         }
       )
@@ -378,7 +372,6 @@ const AdminDashboard = () => {
   };
 
   const handleProfileChange = async (payload: RealtimePayload) => {
-    console.log('[AdminDashboard] handleProfileChange', payload);
     const { eventType, new: newRecord, old: oldRecord } = payload;
 
     if (eventType === 'DELETE' || eventType === 'INSERT') {
@@ -398,7 +391,6 @@ const AdminDashboard = () => {
   };
 
   const handleBrokerChange = async (payload: RealtimePayload) => {
-    console.log('[AdminDashboard] handleBrokerChange', payload);
     const { eventType, new: newRecord } = payload;
     if (eventType === 'DELETE' || eventType === 'INSERT') {
       await fetchDashboardData();
@@ -418,7 +410,6 @@ const AdminDashboard = () => {
   };
 
   const handleLenderChange = async (payload: RealtimePayload) => {
-    console.log('[AdminDashboard] handleLenderChange', payload);
     const { eventType, new: newRecord } = payload;
     if (eventType === 'DELETE' || eventType === 'INSERT') {
       await fetchDashboardData();
@@ -438,7 +429,6 @@ const AdminDashboard = () => {
   };
 
   const handleFileChange = async (payload: RealtimePayload) => {
-    console.log('[AdminDashboard] handleFileChange', payload);
     const { eventType } = payload;
     // Only update file count in state. Do NOT call fetchDashboardData to prevent refresh loops.
     if (eventType === 'INSERT') {

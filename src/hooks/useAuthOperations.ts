@@ -14,13 +14,8 @@ export const useAuthOperations = () => {
         password,
       });
 
-      if (error) {
-        console.error("❌ Sign in error:", error);
-      }
-
       return { error };
     } catch (error) {
-      console.error("💥 Sign in exception:", error);
       return { error };
     }
   };

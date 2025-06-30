@@ -28,7 +28,6 @@ export const useProfileCompletion = (): ProfileCompletionStatus => {
             .maybeSingle();
 
           if (error && error.code !== 'PGRST116') {
-            console.error('Error checking lender profile:', error);
             setIsComplete(false);
           } else {
             // Check both profile_completed flag and required fields
@@ -42,7 +41,6 @@ export const useProfileCompletion = (): ProfileCompletionStatus => {
             .maybeSingle();
 
           if (error && error.code !== 'PGRST116') {
-            console.error('Error checking broker profile:', error);
             setIsComplete(false);
           } else {
             // Check both profile_completed flag and required fields
@@ -53,7 +51,6 @@ export const useProfileCompletion = (): ProfileCompletionStatus => {
           setIsComplete(true);
         }
       } catch (error) {
-        console.error('Error checking profile completion:', error);
         setIsComplete(false);
       } finally {
         setLoading(false);

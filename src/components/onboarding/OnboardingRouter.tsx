@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import LenderOnboarding from './LenderOnboarding';
@@ -16,13 +15,10 @@ const OnboardingRouter = () => {
   }
 
   if (!user) {
-    console.log('No user found in onboarding, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   if (!profile) {
-    console.log('No profile found for user, this should not happen. User ID:', user.id);
-    // Force a page reload to trigger profile creation
     setTimeout(() => {
       window.location.reload();
     }, 2000);
@@ -37,11 +33,7 @@ const OnboardingRouter = () => {
     );
   }
 
-  console.log('OnboardingRouter - User role:', profile.role);
-
-  // Admin users don't need onboarding, redirect to their dashboard
   if (profile.role === 'admin') {
-    console.log('Admin user detected, redirecting to admin dashboard');
     return <Navigate to="/dashboard/admin" replace />;
   }
 
@@ -53,8 +45,6 @@ const OnboardingRouter = () => {
     return <BrokerOnboarding />;
   }
 
-  // Default redirect for unknown roles
-  console.log('Unknown role, redirecting to dashboard:', profile.role);
   return <Navigate to="/dashboard" replace />;
 };
 

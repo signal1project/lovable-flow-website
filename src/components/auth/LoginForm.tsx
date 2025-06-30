@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,14 +19,6 @@ const LoginForm = () => {
   // Handle redirect after successful login based on profile role
   useEffect(() => {
     if (user && profile) {
-      console.log('🔄 Redirecting user based on role:', profile.role);
-      const roleRoutes = {
-        admin: '/dashboard/admin',
-        lender: '/dashboard/lender',
-        broker: '/dashboard/broker'
-      };
-      
-      const targetRoute = roleRoutes[profile.role as keyof typeof roleRoutes] || '/dashboard';
       navigate(targetRoute);
     }
   }, [user, profile, navigate]);

@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +10,6 @@ const AuthCallback = () => {
       const { data, error } = await supabase.auth.getSession();
       
       if (error) {
-        console.error('Auth callback error:', error);
         navigate('/login');
         return;
       }

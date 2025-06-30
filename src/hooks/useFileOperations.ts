@@ -56,14 +56,11 @@ export const useFileOperations = () => {
     setLoading(true);
     try {
       if (!file.file_url_path) {
-        console.error('[deleteFile] File path missing for deletion', file);
         throw new Error("File path missing for deletion");
       }
 
       const bucket = file.broker_id ? "broker_files" : "lender_files";
       const table = file.broker_id ? "broker_files" : "lender_files";
-
-      console.log('[deleteFile] Attempting to delete file:', { file, bucket, table });
 
       // Remove from storage
       const { error: storageError, data: storageData } = await supabase.storage
@@ -71,10 +68,8 @@ export const useFileOperations = () => {
         .remove([file.file_url_path]);
 
       if (storageError) {
-        console.error("[deleteFile] Storage deletion error:", storageError, { file, bucket });
         throw new Error("Failed to delete file from storage");
       }
-      console.log('[deleteFile] Storage deletion success:', storageData);
 
       // Remove DB record
       const { error: dbError, data: dbData } = await supabase
@@ -83,10 +78,8 @@ export const useFileOperations = () => {
         .eq("id", file.id);
 
       if (dbError) {
-        console.error("[deleteFile] Database deletion error:", dbError, { file, table });
         throw new Error("Failed to delete file record from database");
       }
-      console.log('[deleteFile] Database deletion success:', dbData);
 
       toast({
         title: "Success",
@@ -95,7 +88,6 @@ export const useFileOperations = () => {
 
       return true;
     } catch (error: any) {
-      console.error("[deleteFile] Delete file error:", error, file);
       toast({
         title: "Error",
         description: error.message || "Failed to delete file",
@@ -145,7 +137,6 @@ export const useFileOperations = () => {
       const sanitizedFileName = sanitizeFileName(file.name);
       const path = folder ? `${folder}/${sanitizedFileName}` : sanitizedFileName;
 
-      console.log('[uploadUserFile] Uploading to storage:', { bucket, path, file });
       // 1. Upload file to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucket)
@@ -155,19 +146,10 @@ export const useFileOperations = () => {
         });
 
       if (uploadError) {
-        console.error('[uploadUserFile] Upload error:', uploadError);
         throw new Error("Failed to upload file to storage");
       }
-      console.log('[uploadUserFile] Uploaded to storage:', uploadData);
 
       // 2. Insert metadata record into DB
-      console.log('[uploadUserFile] Inserting file record into DB:', {
-        tableName,
-        userId,
-        file_url: uploadData.path,
-        file_name: sanitizedFileName,
-        file_type: file.type,
-      });
       const { error: dbError } = await supabase
         .from(tableName)
         .insert({
@@ -182,10 +164,8 @@ export const useFileOperations = () => {
       if (dbError) {
         // Cleanup uploaded file on failure
         await supabase.storage.from(bucket).remove([uploadData.path]);
-        console.error('[uploadUserFile] Database error:', dbError);
         throw new Error("Failed to save file metadata to database");
       }
-      console.log('[uploadUserFile] Inserted file record into DB');
 
       toast({
         title: "Success",
@@ -194,7 +174,6 @@ export const useFileOperations = () => {
 
       return uploadData.path;
     } catch (error: any) {
-      console.error("[uploadUserFile] Upload file error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to upload file",
@@ -232,7 +211,6 @@ export const useFileOperations = () => {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error: any) {
-      console.error("Download error:", error);
       toast({
         title: "Error",
         description: "Failed to download file",

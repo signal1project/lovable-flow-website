@@ -12,8 +12,6 @@ const Navigation = () => {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
 
-  console.log("Navigation - user:", user, "profile:", profile);
-
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
@@ -34,17 +32,14 @@ const Navigation = () => {
   };
 
   const handleSignOut = async () => {
-    console.log("Sign out button clicked");
     try {
       await signOut();
-      console.log("signOut() completed");
     } catch (e) {
       console.error("Error during sign out:", e);
     }
   };
 
   const getDashboardUrl = () => {
-    console.log("getDashboardUrl - profile:", profile, "role:", profile?.role);
     if (!profile?.role) return "/dashboard";
 
     switch (profile.role) {
