@@ -13,15 +13,21 @@ const supabase = createClient(
 );
 
 app.post('/admin/delete-user', async (req, res) => {
+  console.log('[DELETE USER] Request body:', req.body);
   const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: 'User ID required' });
+  if (!userId) {
+    console.log('[DELETE USER] Missing userId');
+    return res.status(400).json({ error: 'User ID required' });
+  }
 
   // Optionally: Add authentication/authorization here
 
   const { error } = await supabase.auth.admin.deleteUser(userId);
   if (error) {
+    console.log('[DELETE USER] Supabase error object:', error);
     return res.status(400).json({ error: error.message });
   }
+  console.log('[DELETE USER] Success for userId:', userId);
   res.json({ success: true });
 });
 
