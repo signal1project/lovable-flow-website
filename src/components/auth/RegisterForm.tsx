@@ -175,7 +175,7 @@ const RegisterForm = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button
+          {/* <Button
             type="button"
             variant="outline"
             className="w-full"
@@ -183,9 +183,9 @@ const RegisterForm = () => {
             disabled={loading}
           >
             Continue with Google
-          </Button>
+          </Button> */}
           
-          <div className="relative">
+          {/* <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <Separator className="w-full" />
             </div>
@@ -194,7 +194,7 @@ const RegisterForm = () => {
                 Or continue with email
               </span>
             </div>
-          </div>
+          </div> */}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
