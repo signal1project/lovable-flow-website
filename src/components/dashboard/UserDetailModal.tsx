@@ -109,7 +109,7 @@ const UserDetailModal = ({ user, open, onOpenChange, onUserUpdated }: UserDetail
       // After successful profile update, if role is set to admin, call backend to update user_metadata.role
       if (newRole === 'admin') {
         try {
-          const response = await fetch('http://localhost:4000/admin/set-user-role', {
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/set-user-role`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: user.id, role: 'admin' })
