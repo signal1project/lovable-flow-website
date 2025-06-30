@@ -13,21 +13,23 @@ const supabase = createClient(
 );
 
 app.post('/admin/delete-user', async (req, res) => {
-  console.log('[DELETE USER] Request body:', req.body);
   const { userId } = req.body;
   if (!userId) {
-    console.log('[DELETE USER] Missing userId');
     return res.status(400).json({ error: 'User ID required' });
   }
 
-  // Optionally: Add authentication/authorization here
-
-  const { error } = await supabase.auth.admin.deleteUser(userId);
-  if (error) {
-    console.log('[DELETE USER] Supabase error object:', error);
-    return res.status(400).json({ error: error.message, details: error });
+  // Delete from profiles (cascades to brokers, lenders, admin_notes)
+  const { error: profileError } = await supabase.from('profiles').delete().eq('id', userId);
+  if (profileError) {
+    return res.status(400).json({ error: 'Error deleting profile', details: profileError });
   }
-  console.log('[DELETE USER] Success for userId:', userId);
+
+  // Now delete from Auth
+  const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+  if (authError) {
+    return res.status(400).json({ error: authError.message, details: authError });
+  }
+
   res.json({ success: true });
 });
 
